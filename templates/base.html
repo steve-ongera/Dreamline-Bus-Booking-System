@@ -1,0 +1,550 @@
+<!-- templates/website_application/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title|default:"Bus Booking" }}{% endblock %} - DreamLine</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --primary-color: #e63946;
+            --secondary-color: #1d3557;
+            --accent-color: #f1faee;
+            --success-color: #06d6a0;
+            --warning-color: #ffd60a;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        /* Top Navigation */
+        .top-nav {
+            background-color: #fff;
+            padding: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            max-height: 50px;
+        }
+        
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            list-style: none;
+            margin: 0;
+        }
+        
+        .nav-links a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+        
+        .social-icons {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .social-icons a {
+            color: #666;
+            font-size: 18px;
+            transition: color 0.3s;
+        }
+        
+        .social-icons a:hover {
+            color: var(--primary-color);
+        }
+        
+        /* Mobile Menu Toggle */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #333;
+            cursor: pointer;
+        }
+        
+        /* Mobile Sidebar */
+        .mobile-sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            height: 100vh;
+            background: #fff;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 9999;
+            overflow-y: auto;
+        }
+        
+        .mobile-sidebar.active {
+            right: 0;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 9998;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .sidebar-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .sidebar-nav {
+            list-style: none;
+            padding: 20px 0;
+        }
+        
+        .sidebar-nav li {
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .sidebar-nav a {
+            display: block;
+            padding: 15px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        
+        .sidebar-nav a:hover {
+            background: #f8f9fa;
+            color: var(--primary-color);
+        }
+        
+        .sidebar-social {
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        /* Search Bar */
+        .search-bar {
+            background: linear-gradient(135deg, rgba(230, 57, 70, 0.9), rgba(230, 57, 70, 0.7));
+            padding: 20px 0;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .search-input:focus {
+            outline: 2px solid #fff;
+        }
+        
+        .btn-search {
+            background: #fff;
+            color: var(--primary-color);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-search:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #d62828;
+            border-color: #d62828;
+        }
+        
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+        
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 40px 0 20px;
+            margin-top: 80px;
+        }
+        
+        footer h5 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        footer a {
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        footer a:hover {
+            color: var(--primary-color);
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid #34495e;
+            padding-top: 20px;
+            margin-top: 30px;
+        }
+        
+        .powered-by {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #bdc3c7;
+        }
+        
+        .powered-by img {
+            height: 30px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 991px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                width: 100%;
+            }
+            
+            .btn-search {
+                width: 100%;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .social-icons.d-none {
+                display: none !important;
+            }
+        }
+        
+        /* Loading Animation */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <!-- Logo -->
+                <a href="{% url 'home' %}">
+                    <img src="https://dreamline.co.ke/assets/big-logo.png" alt="DreamLine" class="logo">
+                </a>
+                
+                <!-- Desktop Navigation -->
+                <ul class="nav-links">
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                    <li><a href="#">Print Ticket</a></li>
+                    <li><a href="#">Sign In / Register</a></li>
+                </ul>
+                
+                <!-- Social Icons (Desktop) -->
+                <div class="social-icons d-none d-lg-flex">
+                    <a href="#"><i class="bi bi-facebook"></i></a>
+                    <a href="#"><i class="bi bi-twitter"></i></a>
+                    <a href="#"><i class="bi bi-instagram"></i></a>
+                </div>
+                
+                <!-- Mobile Menu Toggle -->
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="mobile-sidebar" id="mobileSidebar">
+        <div class="sidebar-header">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 50'%3E%3Ctext x='5' y='30' font-family='Arial Black' font-size='24' font-weight='bold' fill='%23e63946'%3EDREAM%3C/text%3E%3Ctext x='5' y='42' font-family='Arial' font-size='10' fill='%23333'%3EONLINE TRAVELS%3C/text%3E%3C/svg%3E" alt="DreamLine" style="height: 40px;">
+            <button class="sidebar-close" id="sidebarClose">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <ul class="sidebar-nav">
+            <li><a href="{% url 'home' %}"><i class="bi bi-house-door me-2"></i> Home</a></li>
+            <li><a href="#"><i class="bi bi-info-circle me-2"></i> About Us</a></li>
+            <li><a href="#"><i class="bi bi-telephone me-2"></i> Contact Us</a></li>
+            <li><a href="#"><i class="bi bi-printer me-2"></i> Print Ticket</a></li>
+            <li><a href="#"><i class="bi bi-person me-2"></i> Sign In / Register</a></li>
+        </ul>
+        <div class="sidebar-social">
+            <h6 class="mb-3">Follow Us</h6>
+            <div class="social-icons">
+                <a href="#"><i class="bi bi-facebook"></i></a>
+                <a href="#"><i class="bi bi-twitter"></i></a>
+                <a href="#"><i class="bi bi-instagram"></i></a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search Bar (if on home page) -->
+    {% block search_bar %}{% endblock %}
+    
+    <!-- Main Content -->
+    <main>
+        <div id="alert-container" class="container mt-3"></div>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h5>Top Routes</h5>
+                    <div class="row">
+                        <div class="col-6">
+                            <h6 class="text-danger">From Nairobi</h6>
+                            <ul class="list-unstyled small">
+                                <li><a href="#">Nairobi - Mombasa</a></li>
+                                <li><a href="#">Nairobi - Kisii</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-danger">From Mombasa</h6>
+                            <ul class="list-unstyled small">
+                                <li><a href="#">Nairobi - Kampala</a></li>
+                                <li><a href="#">Nairobi - Malindi</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6>&nbsp;</h6>
+                            <ul class="list-unstyled small">
+                                <li><a href="#">Mombasa - Nairobi</a></li>
+                                <li><a href="#">Mombasa - Kisumu</a></li>
+                                <li><a href="#">Mombasa - Mumias</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <h6>&nbsp;</h6>
+                            <ul class="list-unstyled small">
+                                <li><a href="#">Mombasa - Migori</a></li>
+                                <li><a href="#">Mombasa - Kitui</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6 class="text-danger">From KAMPALA</h6>
+                            <ul class="list-unstyled small">
+                                <li><a href="#">Kampala - Bunjumbura</a></li>
+                                <li><a href="#">Kampala - Nairobi</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-danger">From Kitui</h6>
+                            <ul class="list-unstyled small">
+                                <li><a href="#">Kitui - Mombasa</a></li>
+                                <li><a href="#">Malindi - Nairobi</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="row align-items-center">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40'%3E%3Ctext x='5' y='25' font-family='Arial' font-size='20' fill='%23e63946'%3EiaBiri%3C/text%3E%3C/svg%3E" alt="iaBiri" style="height: 30px;">
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0 text-center">
+                        <div class="powered-by justify-content-center">
+                            <span>Powered by</span>
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40'%3E%3Ctext x='5' y='25' font-family='Arial Black' font-size='18' fill='%23e63946'%3EVOLTIC%3C/text%3E%3C/svg%3E" alt="Voltic">
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <small>
+                            <a href="#" class="me-3">Home</a>
+                            <a href="#" class="me-3">About Us</a>
+                            <a href="#" class="me-3">Print Ticket</a>
+                            <a href="#">Contact Us</a>
+                        </small>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col text-center">
+                        <small class="text-muted">
+                            <a href="#" class="me-3">Privacy Policy</a>
+                            <a href="#">Terms & Conditions</a>
+                        </small>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col text-center">
+                        <small class="text-muted">&copy; 2025 DreamLine. All rights reserved.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery for AJAX -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // Mobile Menu Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const mobileSidebar = document.getElementById('mobileSidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebarClose = document.getElementById('sidebarClose');
+        
+        menuToggle.addEventListener('click', () => {
+            mobileSidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        
+        function closeSidebar() {
+            mobileSidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        sidebarClose.addEventListener('click', closeSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+        
+        // CSRF Token setup for AJAX
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        const csrftoken = getCookie('csrftoken');
+        
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!(/^(GET|HEAD|OPTIONS|TRACE)$/.test(settings.type)) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+        
+        // Show alert messages
+        function showAlert(message, type = 'info') {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#alert-container').html(alertHtml);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                $('.alert').fadeOut();
+            }, 5000);
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

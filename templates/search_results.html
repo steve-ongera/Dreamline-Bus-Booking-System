@@ -1,0 +1,1065 @@
+<!-- templates/website_application/search_results.html -->
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .journey-header {
+        background: linear-gradient(135deg, #e63946 0%, #ff6b6b 100%);
+        color: white;
+        padding: 20px 0;
+        margin-bottom: 0;
+    }
+    
+    .journey-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    
+    .journey-info i {
+        font-size: 20px;
+    }
+    
+    .modify-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid white;
+        color: white;
+        padding: 8px 20px;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .modify-btn:hover {
+        background: white;
+        color: #e63946;
+    }
+    
+    .filters-bar {
+        background: #fff9e6;
+        padding: 15px 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .filter-btn {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .filter-btn:hover {
+        background: #f8f9fa;
+        border-color: #e63946;
+    }
+    
+    .sort-dropdown {
+        padding: 8px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+    }
+    
+    .notice-bar {
+        background: #fff3cd;
+        padding: 12px;
+        border-left: 4px solid #ffc107;
+        margin-bottom: 20px;
+    }
+    
+    .trip-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+        border-radius: 0;
+    }
+    
+    .trip-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #e63946;
+    }
+    
+    .trip-icon {
+        width: 60px;
+        height: 60px;
+        background: #f8f9fa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+    }
+    
+    .bus-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .operator-name {
+        color: #666;
+        font-size: 13px;
+    }
+    
+    .amenity-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        margin-right: 5px;
+        font-size: 16px;
+    }
+    
+    .departure-time {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .time-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+        font-size: 14px;
+    }
+    
+    .seats-available {
+        color: #e63946;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .seat-class-badge {
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-right: 8px;
+        display: inline-block;
+        margin-bottom: 5px;
+    }
+    
+    .badge-vip {
+        background: #fff3e0;
+        color: #e65100;
+    }
+    
+    .badge-business {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+    
+    .badge-normal {
+        background: #f5f5f5;
+        color: #616161;
+    }
+    
+    .view-seats-btn {
+        background: #e63946;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .view-seats-btn:hover {
+        background: #d62828;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(230, 57, 70, 0.3);
+    }
+    
+    /* Seat Selection Styles */
+    .seat-modal-header {
+        background: #f8f9fa;
+        border-bottom: 2px solid #e63946;
+    }
+    
+    .seat-layout-container {
+        background: #f8f9fa;
+        border: 3px solid #dee2e6;
+        border-radius: 15px;
+        padding: 30px 20px;
+        position: relative;
+    }
+    
+    .seat {
+        width: 45px;
+        height: 45px;
+        margin: 3px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+    
+    .seat.available {
+        background: white;
+        border-color: #4caf50;
+        color: #2e7d32;
+    }
+    
+    .seat.available:hover {
+        background: #4caf50;
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    }
+    
+    .seat.booked {
+        background: #bdbdbd;
+        border-color: #757575;
+        color: #424242;
+        cursor: not-allowed;
+    }
+    
+    .seat.locked {
+        background: #fff3e0;
+        border-color: #ff9800;
+        color: #e65100;
+        cursor: not-allowed;
+    }
+    
+    .seat.selected {
+        background: #e63946;
+        border-color: #d62828;
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+    }
+    
+    .seat-row {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 8px;
+        gap: 5px;
+    }
+    
+    .seat-legend {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 2px solid #dee2e6;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+    }
+    
+    .legend-box {
+        width: 25px;
+        height: 25px;
+        border: 2px solid;
+        border-radius: 4px;
+    }
+    
+    .driver-icon {
+        position: absolute;
+        top: 15px;
+        right: 25px;
+        font-size: 2.5rem;
+        color: #666;
+    }
+    
+    .booking-summary-card {
+        position: sticky;
+        top: 20px;
+        border: 2px solid #e63946;
+    }
+    
+    .booking-summary-card .card-header {
+        background: #e63946;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .selected-seat-item {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .total-amount {
+        font-size: 24px;
+        color: #e63946;
+        font-weight: 700;
+    }
+    
+    .proceed-btn {
+        background: #e63946;
+        color: white;
+        border: none;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .proceed-btn:hover:not(:disabled) {
+        background: #d62828;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);
+    }
+    
+    .proceed-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .payment-summary {
+        background: #fff9e6;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 4px;
+    }
+    
+    .pay-button {
+        background: #06d6a0;
+        color: white;
+        border: none;
+        padding: 14px;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .pay-button:hover {
+        background: #05b589;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(6, 214, 160, 0.3);
+    }
+    
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #e63946;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 30px auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    
+    .empty-state i {
+        font-size: 80px;
+        color: #ccc;
+        margin-bottom: 20px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .journey-info {
+            font-size: 14px;
+            gap: 8px;
+        }
+        
+        .seat {
+            width: 38px;
+            height: 38px;
+            font-size: 10px;
+        }
+        
+        .trip-card .row > div {
+            text-align: center !important;
+            margin-bottom: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Alert Container -->
+<div id="alert-container"></div>
+
+<!-- Journey Header -->
+<section class="journey-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div class="journey-info">
+                <span>ONWARD JOURNEY</span>
+                <span>{{ origin.name|upper }}</span>
+                <i class="bi bi-arrow-right"></i>
+                <span>{{ destination.name|upper }}</span>
+                <span>{{ travel_date|date:"d M Y" }}</span>
+            </div>
+            <a href="{% url 'home' %}" class="modify-btn">
+                Modify
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Filters Bar -->
+<section class="filters-bar">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <button class="filter-btn">
+                <i class="bi bi-funnel"></i> View Filters
+            </button>
+            <div>
+                <span class="me-2">Sort By:</span>
+                <select class="sort-dropdown" id="sortBy">
+                    <option value="not_set">Not Set</option>
+                    <option value="departure_time">Departure Time</option>
+                    <option value="price_low">Price: Low to High</option>
+                    <option value="price_high">Price: High to Low</option>
+                    <option value="rating">Rating</option>
+                    <option value="available_seats">Available Seats</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container my-4">
+    <!-- Notice Bar -->
+    <div class="notice-bar">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Please note:</strong> Highlighted buses are coming from other towns and might delay to depart.
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center py-5">
+        <div class="loader"></div>
+        <p class="mt-3 text-muted">Searching for available trips...</p>
+    </div>
+    
+    <!-- Trips List -->
+    <div id="tripsList" style="display: none;"></div>
+    
+    <!-- No Results -->
+    <div id="noResults" class="empty-state" style="display: none;">
+        <i class="bi bi-bus-front"></i>
+        <h4 class="mt-3">No trips found</h4>
+        <p class="text-muted">Try searching for a different date or route</p>
+        <a href="{% url 'home' %}" class="btn btn-primary mt-3">
+            <i class="bi bi-search"></i> Search Again
+        </a>
+    </div>
+</div>
+
+<!-- Seat Selection Modal -->
+<div class="modal fade" id="seatModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header seat-modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-grid-3x3-gap"></i> Customize Your Journey
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Seat Layout -->
+                    <div class="col-lg-7">
+                        <div class="mb-3">
+                            <span class="badge bg-primary me-2" id="normalBadge" style="display: none;">Normal: KES <span id="normalPrice">0</span></span>
+                            <span class="badge bg-info me-2" id="businessBadge" style="display: none;">Business: KES <span id="businessPrice">0</span></span>
+                            <span class="badge bg-warning" id="vipBadge" style="display: none;">VIP: KES <span id="vipPrice">0</span></span>
+                        </div>
+                        
+                        <div class="seat-layout-container">
+                            <div class="driver-icon">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                            <div id="seatLayout"></div>
+                            
+                            <!-- Seat Legend -->
+                            <div class="seat-legend">
+                                <div class="legend-item">
+                                    <div class="legend-box" style="background: white; border-color: #4caf50;"></div>
+                                    <span>Available Seat</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-box" style="background: #e63946; border-color: #d62828;"></div>
+                                    <span>Selected seats</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-box" style="background: #bdbdbd; border-color: #757575;"></div>
+                                    <span>Booked seats</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-box" style="background: #fff3e0; border-color: #ff9800;"></div>
+                                    <span>Locked</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Booking Summary -->
+                    <div class="col-lg-5">
+                        <div class="card booking-summary-card">
+                            <div class="card-header">
+                                Selected Seats
+                            </div>
+                            <div class="card-body">
+                                <div id="selectedSeatsList">
+                                    <p class="text-muted text-center py-4">
+                                        <i class="bi bi-hand-index"></i><br>
+                                        Click on available seats to select
+                                    </p>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <strong>Total Amount:</strong>
+                                    <strong class="text-primary" id="totalAmount">KES 0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Boarding/Dropping Points -->
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-geo-alt-fill"></i> Boarding Point:
+                                    </label>
+                                    <select class="form-select" id="boardingPoint">
+                                        <option value="">Select boarding point</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-geo-fill"></i> Dropping Point:
+                                    </label>
+                                    <select class="form-select" id="droppingPoint">
+                                        <option value="">Select dropping point</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="proceed-btn mt-3" id="proceedBtn" disabled>
+                            <i class="bi bi-arrow-right-circle"></i> Continue to Passenger Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Booking Details Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-badge"></i> Passenger Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bookingForm">
+                    <h6 class="mb-3 fw-bold">Enter Your Information</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-person"></i> Full Name *
+                            </label>
+                            <input type="text" class="form-control" id="fullName" required placeholder="John Doe">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-card-text"></i> ID / Passport Number *
+                            </label>
+                            <input type="text" class="form-control" id="idNumber" required placeholder="12345678">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-envelope"></i> Email Address *
+                            </label>
+                            <input type="email" class="form-control" id="email" required placeholder="john@example.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-phone"></i> M-Pesa Phone Number *
+                            </label>
+                            <input type="tel" class="form-control" id="phone" required placeholder="0712345678" pattern="[0-9]{10}">
+                            <small class="text-muted">Payment prompt will be sent to this number</small>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Payment Information:</strong> An M-Pesa STK push will be sent to your phone. Please enter your M-Pesa PIN to complete payment.
+                    </div>
+                    
+                    <div class="payment-summary">
+                        <h6 class="fw-bold mb-3">Booking Summary</h6>
+                        <div id="bookingSummary"></div>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Total Amount:</span>
+                            <span class="total-amount">KES <span id="finalAmount">0.00</span></span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="pay-button mt-3" id="payBtn">
+                        <i class="bi bi-credit-card"></i> Pay with M-Pesa
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedTrip = null;
+let selectedSeats = [];
+let seatLockTimers = {};
+
+$(document).ready(function() {
+    loadTrips();
+    
+    $('#sortBy').change(function() {
+        sortTrips($(this).val());
+    });
+});
+
+function loadTrips() {
+    $.ajax({
+        url: '{% url "api_search_trips" %}',
+        data: {
+            origin: '{{ origin.id }}',
+            destination: '{{ destination.id }}',
+            date: '{{ travel_date_str }}'
+        },
+        success: function(data) {
+            $('#loadingSpinner').hide();
+            
+            if (data.trips && data.trips.length > 0) {
+                displayTrips(data.trips);
+                $('#tripsList').show();
+            } else {
+                $('#noResults').show();
+            }
+        },
+        error: function(xhr) {
+            $('#loadingSpinner').hide();
+            showAlert('Error loading trips. Please try again.', 'danger');
+        }
+    });
+}
+
+function displayTrips(trips) {
+    let html = '';
+    
+    trips.forEach(trip => {
+        const amenitiesHtml = trip.amenities.slice(0, 3).map(a => 
+            `<span class="amenity-icon" title="${a.name}">${a.icon}</span>`
+        ).join('');
+        
+        const moreAmenities = trip.amenities.length > 3 ? 
+            `<span class="amenity-icon text-primary" title="View all amenities">+${trip.amenities.length - 3}</span>` : '';
+        
+        const stars = '★'.repeat(Math.floor(trip.rating)) + '☆'.repeat(5 - Math.floor(trip.rating));
+        
+        let pricesHtml = '';
+        if (trip.prices.normal) pricesHtml += `<span class="seat-class-badge badge-normal">Normal: KES ${trip.prices.normal}</span>`;
+        if (trip.prices.business) pricesHtml += `<span class="seat-class-badge badge-business">Business: KES ${trip.prices.business}</span>`;
+        if (trip.prices.vip) pricesHtml += `<span class="seat-class-badge badge-vip">VIP: KES ${trip.prices.vip}</span>`;
+        
+        html += `
+            <div class="trip-card" data-trip-id="${trip.id}">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-lg-2 col-md-3 text-center mb-3 mb-md-0">
+                            <div class="trip-icon mx-auto mb-2">
+                                <i class="bi bi-bus-front-fill text-primary"></i>
+                            </div>
+                            <div class="bus-name">${trip.bus_name}</div>
+                            <div class="operator-name">${trip.operator}</div>
+                            <div class="mt-2">${amenitiesHtml}${moreAmenities}</div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-3 col-6 text-center mb-3 mb-lg-0">
+                            <div class="time-label">Departure</div>
+                            <div class="departure-time">${trip.departure_time}</div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-3 col-6 text-center mb-3 mb-lg-0">
+                            <div class="time-label">Arrival</div>
+                            <div class="departure-time">${trip.arrival_time}</div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-3 text-center mb-3 mb-lg-0">
+                            <div class="time-label">Rating</div>
+                            <div class="rating-stars">${stars}</div>
+                            <small class="text-muted">(${trip.total_ratings})</small>
+                        </div>
+                        
+                        <div class="col-lg-2 text-center mb-3 mb-lg-0">
+                            <div class="seats-available">${trip.available_seats.total} Seats</div>
+                            <div class="mt-2">${pricesHtml}</div>
+                        </div>
+                        
+                        <div class="col-lg-2 text-center">
+                            <button class="view-seats-btn" onclick="viewSeats(${trip.id})">
+                                View Seats
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    $('#tripsList').html(html);
+}
+
+function sortTrips(criteria) {
+    console.log('Sorting by:', criteria);
+    // Implement sorting logic based on criteria
+}
+
+function viewSeats(tripId) {
+    selectedTrip = tripId;
+    selectedSeats = [];
+    
+    // Clear existing locks
+    Object.keys(seatLockTimers).forEach(seatId => {
+        unlockSeat(seatId);
+    });
+    
+    $.ajax({
+        url: `/api/trips/${tripId}/seats/`,
+        success: function(data) {
+            console.log('Seats data:', data); // Debug log
+            
+            // Display prices if available
+            if (data.prices) {
+                displayPrices(data.prices);
+            }
+            
+            // Display seats
+            if (data.seats && data.seats.length > 0) {
+                displaySeats(data.seats);
+                $('#seatModal').modal('show');
+            } else {
+                showAlert('No seats available for this trip', 'warning');
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading seats:', xhr);
+            showAlert('Error loading seats', 'danger');
+        }
+    });
+    
+    // Load boarding points
+    $.ajax({
+        url: `/api/trips/${tripId}/boarding-points/`,
+        success: function(data) {
+            let boardingHtml = '<option value="">Select boarding point</option>';
+            let droppingHtml = '<option value="">Select dropping point</option>';
+            
+            if (data.boarding_points) {
+                data.boarding_points.forEach(p => {
+                    boardingHtml += `<option value="${p.id}">${p.display}</option>`;
+                });
+            }
+            
+            if (data.dropping_points) {
+                data.dropping_points.forEach(p => {
+                    droppingHtml += `<option value="${p.id}">${p.display}</option>`;
+                });
+            }
+            
+            $('#boardingPoint').html(boardingHtml);
+            $('#droppingPoint').html(droppingHtml);
+        },
+        error: function(xhr) {
+            console.error('Error loading boarding points:', xhr);
+        }
+    });
+}
+
+function displayPrices(prices) {
+    // Hide all price badges first
+    $('#normalBadge, #businessBadge, #vipBadge').hide();
+    
+    // Check if prices object exists and has valid data
+    if (!prices) {
+        console.warn('No prices data available');
+        return;
+    }
+    
+    if (prices.normal && prices.normal > 0) {
+        $('#normalPrice').text(parseFloat(prices.normal).toFixed(2));
+        $('#normalBadge').show();
+    }
+    if (prices.business && prices.business > 0) {
+        $('#businessPrice').text(parseFloat(prices.business).toFixed(2));
+        $('#businessBadge').show();
+    }
+    if (prices.vip && prices.vip > 0) {
+        $('#vipPrice').text(parseFloat(prices.vip).toFixed(2));
+        $('#vipBadge').show();
+    }
+}
+
+function displaySeats(seats) {
+    // Validate seats data
+    if (!seats || seats.length === 0) {
+        $('#seatLayout').html('<p class="text-center text-muted py-4">No seats available</p>');
+        return;
+    }
+    
+    // Group seats by row
+    const rows = {};
+    seats.forEach(seat => {
+        if (!rows[seat.row_number]) {
+            rows[seat.row_number] = [];
+        }
+        rows[seat.row_number].push(seat);
+    });
+    
+    let html = '';
+    Object.keys(rows).sort((a, b) => a - b).forEach(rowNum => {
+        html += '<div class="seat-row">';
+        rows[rowNum].forEach(seat => {
+            let statusClass = 'available';
+            if (!seat.is_available) statusClass = 'booked';
+            else if (seat.is_locked) statusClass = 'locked';
+            
+            // Ensure fare is a valid number
+            const fare = parseFloat(seat.fare) || 0;
+            
+            html += `
+                <div class="seat ${statusClass}" 
+                     data-seat-id="${seat.id}"
+                     data-seat-number="${seat.seat_number}"
+                     data-fare="${fare}"
+                     onclick="toggleSeat(${seat.id}, '${seat.seat_number}', ${fare}, '${statusClass}')">
+                    ${seat.seat_number}
+                </div>
+            `;
+        });
+        html += '</div>';
+    });
+    
+    $('#seatLayout').html(html);
+    updateSummary();
+}
+
+function toggleSeat(seatId, seatNumber, fare, status) {
+    if (status === 'booked' || status === 'locked') return;
+    
+    const seatEl = $(`.seat[data-seat-id="${seatId}"]`);
+    const index = selectedSeats.findIndex(s => s.id === seatId);
+    
+    if (index > -1) {
+        // Deselect
+        selectedSeats.splice(index, 1);
+        seatEl.removeClass('selected').addClass('available');
+        unlockSeat(seatId);
+    } else {
+        // Select
+        selectedSeats.push({ id: seatId, number: seatNumber, fare: fare });
+        seatEl.removeClass('available').addClass('selected');
+        lockSeat(seatId);
+    }
+    
+    updateSummary();
+}
+
+function lockSeat(seatId) {
+    $.ajax({
+        url: '{% url "api_lock_seat" %}',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ seat_id: seatId }),
+        success: function(data) {
+            // Set timer to unlock after the specified time
+            seatLockTimers[seatId] = setTimeout(() => {
+                unlockSeat(seatId);
+                const seatEl = $(`.seat[data-seat-id="${seatId}"]`);
+                seatEl.removeClass('selected').addClass('available');
+                selectedSeats = selectedSeats.filter(s => s.id !== seatId);
+                updateSummary();
+                showAlert('Seat lock expired. Please reselect.', 'warning');
+            }, data.expires_in * 1000);
+        },
+        error: function() {
+            showAlert('Error locking seat', 'warning');
+        }
+    });
+}
+
+function unlockSeat(seatId) {
+    if (seatLockTimers[seatId]) {
+        clearTimeout(seatLockTimers[seatId]);
+        delete seatLockTimers[seatId];
+    }
+    
+    $.ajax({
+        url: '{% url "api_unlock_seat" %}',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ seat_id: seatId })
+    });
+}
+
+function updateSummary() {
+    if (selectedSeats.length === 0) {
+        $('#selectedSeatsList').html(`
+            <p class="text-muted text-center py-4">
+                <i class="bi bi-hand-index"></i><br>
+                Click on available seats to select
+            </p>
+        `);
+        $('#totalAmount, #finalAmount').text('KES 0.00');
+        $('#proceedBtn').prop('disabled', true);
+        return;
+    }
+    
+    let total = 0;
+    let html = '';
+    
+    selectedSeats.forEach(seat => {
+        total += parseFloat(seat.fare);
+        html += `
+            <div class="selected-seat-item">
+                <span><strong>Seat ${seat.number}</strong></span>
+                <span>KES ${parseFloat(seat.fare).toFixed(2)}</span>
+            </div>
+        `;
+    });
+    
+    $('#selectedSeatsList').html(html);
+    $('#totalAmount, #finalAmount').text(total.toFixed(2));
+    $('#proceedBtn').prop('disabled', false);
+    
+    // Update booking summary for the booking modal
+    $('#bookingSummary').html(html);
+}
+
+function showAlert(message, type = 'info') {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('#alert-container').html(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        $('#alert-container .alert').alert('close');
+    }, 5000);
+}
+
+$('#proceedBtn').click(function() {
+    // Validate boarding and dropping points are selected
+    if (!$('#boardingPoint').val() || !$('#droppingPoint').val()) {
+        showAlert('Please select both boarding and dropping points', 'warning');
+        return;
+    }
+    
+    $('#seatModal').modal('hide');
+    $('#bookingModal').modal('show');
+});
+
+$('#bookingForm').submit(function(e) {
+    e.preventDefault();
+    
+    const bookingData = {
+        trip_id: selectedTrip,
+        seat_ids: selectedSeats.map(s => s.id),
+        boarding_point_id: $('#boardingPoint').val(),
+        dropping_point_id: $('#droppingPoint').val(),
+        full_name: $('#fullName').val(),
+        id_number: $('#idNumber').val(),
+        email: $('#email').val(),
+        phone: $('#phone').val()
+    };
+    
+    $('#payBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Processing...');
+    
+    $.ajax({
+        url: '{% url "api_create_booking" %}',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(bookingData),
+        success: function(data) {
+            $('#bookingModal').modal('hide');
+            showAlert(`Booking successful! Reference: ${data.booking_reference}. Check your phone for M-Pesa prompt.`, 'success');
+            
+            // Redirect or reload after 3 seconds
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON?.error || 'Booking failed. Please try again.';
+            showAlert(error, 'danger');
+            $('#payBtn').prop('disabled', false).html('<i class="bi bi-credit-card"></i> Pay with M-Pesa');
+        }
+    });
+});
+
+// Clean up on modal close
+$('#seatModal').on('hidden.bs.modal', function() {
+    Object.keys(seatLockTimers).forEach(seatId => unlockSeat(seatId));
+    selectedSeats = [];
+});
+
+$('#bookingModal').on('hidden.bs.modal', function() {
+    // If user closes booking modal, show seat selection again
+    if (selectedSeats.length > 0) {
+        $('#seatModal').modal('show');
+    }
+});
+</script>
+{% endblock %}
