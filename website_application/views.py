@@ -279,8 +279,10 @@ def api_get_boarding_points(request, trip_id):
     dropping_points = []
     
     for stop in stops:
+        # IMPORTANT: Return the RouteStop ID, not the BoardingPoint ID
         point_data = {
-            'id': stop.boarding_point.id,
+            'id': stop.id,  # This is the RouteStop ID - what the booking expects
+            'boarding_point_id': stop.boarding_point.id,  # This is the actual BoardingPoint ID
             'name': stop.boarding_point.name,
             'location': stop.boarding_point.location.name,
             'address': stop.boarding_point.address,
@@ -296,6 +298,7 @@ def api_get_boarding_points(request, trip_id):
         'boarding_points': boarding_points,
         'dropping_points': dropping_points
     })
+
 
 
 @require_http_methods(["POST"])
@@ -335,11 +338,21 @@ def api_calculate_total(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
 
+import logging
+from django.views.decorators.csrf import csrf_exempt
+
+logger = logging.getLogger(__name__)
+
+@csrf_exempt  # Add this if you're getting CSRF token errors
 @require_http_methods(["POST"])
 def api_create_booking(request):
     """API to create a booking with payment initiation"""
     try:
+        # Log the raw request body for debugging
+        logger.info(f"Request body: {request.body.decode('utf-8')}")
+        
         data = json.loads(request.body)
+        logger.info(f"Parsed data: {data}")
         
         # Validate required fields
         required_fields = [
@@ -348,31 +361,84 @@ def api_create_booking(request):
             'email', 'phone'
         ]
         
+        missing_fields = []
         for field in required_fields:
-            if not data.get(field):
-                return JsonResponse({
-                    'error': f'Missing required field: {field}'
-                }, status=400)
+            if field not in data or not data.get(field):
+                missing_fields.append(field)
         
-        trip = get_object_or_404(Trip, id=data['trip_id'])
-        seat_ids = data['seat_ids']
+        if missing_fields:
+            error_msg = f'Missing required fields: {", ".join(missing_fields)}'
+            logger.error(error_msg)
+            return JsonResponse({
+                'error': error_msg,
+                'missing_fields': missing_fields
+            }, status=400)
+        
+        # Validate data types
+        try:
+            trip_id = int(data['trip_id'])
+            boarding_point_id = int(data['boarding_point_id'])
+            dropping_point_id = int(data['dropping_point_id'])
+            seat_ids = [int(sid) for sid in data['seat_ids']]
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid data type: {str(e)}")
+            return JsonResponse({
+                'error': 'Invalid data type for numeric fields'
+            }, status=400)
+        
+        # Validate seat_ids is not empty
+        if not seat_ids:
+            return JsonResponse({
+                'error': 'At least one seat must be selected'
+            }, status=400)
+        
+        trip = get_object_or_404(Trip, id=trip_id)
         
         # Verify session has locks on these seats
+        if not request.session.session_key:
+            request.session.create()
+        
         session_id = request.session.session_key
+        logger.info(f"Session ID: {session_id}")
+        
+        locked_seats = []
+        unlocked_seats = []
+        
         for seat_id in seat_ids:
             lock_key = f"seat_lock_{seat_id}"
             locked_by = cache.get(lock_key)
-            if locked_by != session_id:
-                return JsonResponse({
-                    'error': f'Seat {seat_id} lock expired or invalid'
-                }, status=400)
+            logger.info(f"Seat {seat_id} locked by: {locked_by}")
+            
+            if locked_by == session_id:
+                locked_seats.append(seat_id)
+            else:
+                unlocked_seats.append(seat_id)
+        
+        if unlocked_seats:
+            return JsonResponse({
+                'error': f'Seat locks expired or invalid for seats: {unlocked_seats}. Please reselect seats.'
+            }, status=400)
         
         # Get seats and verify availability
         seats = Seat.objects.filter(id__in=seat_ids, is_available=True)
         
         if seats.count() != len(seat_ids):
+            unavailable = set(seat_ids) - set(seats.values_list('id', flat=True))
             return JsonResponse({
-                'error': 'Some seats are no longer available'
+                'error': f'Some seats are no longer available: {list(unavailable)}'
+            }, status=400)
+        
+        # Validate boarding and dropping points
+        try:
+            boarding_route_stop = RouteStop.objects.select_related('boarding_point').get(id=boarding_point_id)
+            dropping_route_stop = RouteStop.objects.select_related('boarding_point').get(id=dropping_point_id)
+            
+            boarding_point = boarding_route_stop.boarding_point
+            dropping_point = dropping_route_stop.boarding_point
+            
+        except RouteStop.DoesNotExist:
+            return JsonResponse({
+                'error': 'Invalid boarding or dropping point'
             }, status=400)
         
         # Calculate total
@@ -385,11 +451,13 @@ def api_create_booking(request):
             customer_id_number=data['id_number'],
             customer_email=data['email'],
             customer_phone=data['phone'],
-            boarding_point_id=data['boarding_point_id'],
-            dropping_point_id=data['dropping_point_id'],
+            boarding_point=boarding_point,
+            dropping_point=dropping_point,
             total_amount=total_amount,
             status='pending'
         )
+        
+        logger.info(f"Created booking: {booking.booking_reference}")
         
         # Create seat bookings and mark seats as unavailable
         for seat in seats:
@@ -404,9 +472,9 @@ def api_create_booking(request):
             # Remove lock
             lock_key = f"seat_lock_{seat.id}"
             cache.delete(lock_key)
+            logger.info(f"Removed lock for seat {seat.id}")
         
-        # Here you would initiate M-Pesa payment
-        # For now, we'll create a pending payment record
+        # Create payment record
         payment = Payment.objects.create(
             booking=booking,
             transaction_id=f"TXN{booking.booking_reference}",
@@ -416,6 +484,10 @@ def api_create_booking(request):
             status='initiated'
         )
         
+        logger.info(f"Payment initiated: {payment.transaction_id}")
+        
+        # TODO: Initiate M-Pesa STK Push here
+        
         return JsonResponse({
             'success': True,
             'booking_reference': booking.booking_reference,
@@ -424,7 +496,15 @@ def api_create_booking(request):
             'message': 'Booking created. Please complete payment.'
         })
         
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        return JsonResponse({
+            'error': 'Invalid JSON format',
+            'details': str(e)
+        }, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.exception(f"Unexpected error in booking creation: {str(e)}")
+        return JsonResponse({
+            'error': 'An unexpected error occurred',
+            'details': str(e)
+        }, status=500)

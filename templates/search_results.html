@@ -1,4 +1,4 @@
-<!-- templates/website_application/search_results.html -->
+<!-- templates/search_results.html -->
 {% extends 'base.html' %}
 
 {% block extra_css %}
@@ -655,6 +655,7 @@
 {% endblock %}
 
 {% block extra_js %}
+
 <script>
 let selectedTrip = null;
 let selectedSeats = [];
@@ -666,6 +667,15 @@ $(document).ready(function() {
     $('#sortBy').change(function() {
         sortTrips($(this).val());
     });
+    
+    // Debug function - you can call this in console: debugSeats()
+    window.debugSeats = function() {
+        console.log('=== SEAT DEBUG INFO ===');
+        console.log('Selected Trip:', selectedTrip);
+        console.log('Selected Seats:', selectedSeats);
+        console.log('Seat Lock Timers:', Object.keys(seatLockTimers));
+        console.log('======================');
+    };
 });
 
 function loadTrips() {
@@ -772,6 +782,7 @@ function viewSeats(tripId) {
     Object.keys(seatLockTimers).forEach(seatId => {
         unlockSeat(seatId);
     });
+    seatLockTimers = {};
     
     $.ajax({
         url: `/api/trips/${tripId}/seats/`,
@@ -911,6 +922,7 @@ function toggleSeat(seatId, seatNumber, fare, status) {
         lockSeat(seatId);
     }
     
+    console.log('Selected seats after toggle:', selectedSeats); // Debug log
     updateSummary();
 }
 
@@ -921,8 +933,10 @@ function lockSeat(seatId) {
         contentType: 'application/json',
         data: JSON.stringify({ seat_id: seatId }),
         success: function(data) {
+            console.log(`Seat ${seatId} locked for ${data.expires_in} seconds`);
             // Set timer to unlock after the specified time
             seatLockTimers[seatId] = setTimeout(() => {
+                console.log(`Seat ${seatId} lock expired`);
                 unlockSeat(seatId);
                 const seatEl = $(`.seat[data-seat-id="${seatId}"]`);
                 seatEl.removeClass('selected').addClass('available');
@@ -931,7 +945,8 @@ function lockSeat(seatId) {
                 showAlert('Seat lock expired. Please reselect.', 'warning');
             }, data.expires_in * 1000);
         },
-        error: function() {
+        error: function(xhr) {
+            console.error('Error locking seat:', xhr);
             showAlert('Error locking seat', 'warning');
         }
     });
@@ -941,17 +956,26 @@ function unlockSeat(seatId) {
     if (seatLockTimers[seatId]) {
         clearTimeout(seatLockTimers[seatId]);
         delete seatLockTimers[seatId];
+        console.log(`Cleared timer for seat ${seatId}`);
     }
     
     $.ajax({
         url: '{% url "api_unlock_seat" %}',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ seat_id: seatId })
+        data: JSON.stringify({ seat_id: seatId }),
+        success: function() {
+            console.log(`Seat ${seatId} unlocked`);
+        },
+        error: function(xhr) {
+            console.error('Error unlocking seat:', xhr);
+        }
     });
 }
 
 function updateSummary() {
+    console.log('Updating summary with seats:', selectedSeats); // Debug log
+    
     if (selectedSeats.length === 0) {
         $('#selectedSeatsList').html(`
             <p class="text-muted text-center py-4">
@@ -1001,29 +1025,122 @@ function showAlert(message, type = 'info') {
 }
 
 $('#proceedBtn').click(function() {
+    console.log('Proceed button clicked');
+    window.debugSeats(); // Debug info
+    
     // Validate boarding and dropping points are selected
     if (!$('#boardingPoint').val() || !$('#droppingPoint').val()) {
         showAlert('Please select both boarding and dropping points', 'warning');
         return;
     }
     
+    // Double-check seats are still selected
+    if (!selectedSeats || selectedSeats.length === 0) {
+        showAlert('Please select at least one seat', 'warning');
+        return;
+    }
+    
+    console.log('Proceeding to booking modal with seats:', selectedSeats);
+    
+    // Set flag before hiding seat modal
+    isTransitioningToBooking = true;
+    
     $('#seatModal').modal('hide');
-    $('#bookingModal').modal('show');
+    
+    // Small delay to ensure modal is hidden before showing next one
+    setTimeout(function() {
+        $('#bookingModal').modal('show');
+        // Reset flag after booking modal is shown
+        setTimeout(function() {
+            isTransitioningToBooking = false;
+        }, 500);
+    }, 300);
 });
 
 $('#bookingForm').submit(function(e) {
     e.preventDefault();
     
+    console.log('Form submitted');
+    window.debugSeats(); // Debug info
+    
+    // Check seats FIRST before anything else
+    if (!selectedSeats || selectedSeats.length === 0) {
+        showAlert('No seats selected. Please go back and select seats.', 'danger');
+        $('#payBtn').prop('disabled', false);
+        return false;
+    }
+    
+    if (!selectedTrip) {
+        showAlert('Trip information missing. Please start again.', 'danger');
+        return false;
+    }
+    
+    // Validate all required fields
+    const fullName = $('#fullName').val().trim();
+    const idNumber = $('#idNumber').val().trim();
+    const email = $('#email').val().trim();
+    const phone = $('#phone').val().trim();
+    const boardingPoint = $('#boardingPoint').val();
+    const droppingPoint = $('#droppingPoint').val();
+    
+    // Validation checks
+    if (!fullName) {
+        showAlert('Please enter your full name', 'warning');
+        return false;
+    }
+    
+    if (!idNumber) {
+        showAlert('Please enter your ID/Passport number', 'warning');
+        return false;
+    }
+    
+    if (!email) {
+        showAlert('Please enter your email address', 'warning');
+        return false;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showAlert('Please enter a valid email address', 'warning');
+        return false;
+    }
+    
+    if (!phone) {
+        showAlert('Please enter your phone number', 'warning');
+        return false;
+    }
+    
+    // Validate phone format (10 digits)
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+        showAlert('Please enter a valid 10-digit phone number', 'warning');
+        return false;
+    }
+    
+    if (!boardingPoint) {
+        showAlert('Please select a boarding point', 'warning');
+        return false;
+    }
+    
+    if (!droppingPoint) {
+        showAlert('Please select a dropping point', 'warning');
+        return false;
+    }
+    
+    // Prepare booking data - ensure all fields match backend expectations
     const bookingData = {
         trip_id: selectedTrip,
         seat_ids: selectedSeats.map(s => s.id),
-        boarding_point_id: $('#boardingPoint').val(),
-        dropping_point_id: $('#droppingPoint').val(),
-        full_name: $('#fullName').val(),
-        id_number: $('#idNumber').val(),
-        email: $('#email').val(),
-        phone: $('#phone').val()
+        boarding_point_id: parseInt(boardingPoint),
+        dropping_point_id: parseInt(droppingPoint),
+        full_name: fullName,
+        id_number: idNumber,
+        email: email,
+        phone: phone
     };
+    
+    console.log('Sending booking data:', bookingData); // Debug log
     
     $('#payBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Processing...');
     
@@ -1033,6 +1150,16 @@ $('#bookingForm').submit(function(e) {
         contentType: 'application/json',
         data: JSON.stringify(bookingData),
         success: function(data) {
+            console.log('Booking response:', data); // Debug log
+            
+            // Clear seat locks after successful booking
+            Object.keys(seatLockTimers).forEach(seatId => {
+                if (seatLockTimers[seatId]) {
+                    clearTimeout(seatLockTimers[seatId]);
+                }
+            });
+            seatLockTimers = {};
+            
             $('#bookingModal').modal('hide');
             showAlert(`Booking successful! Reference: ${data.booking_reference}. Check your phone for M-Pesa prompt.`, 'success');
             
@@ -1041,25 +1168,111 @@ $('#bookingForm').submit(function(e) {
                 location.reload();
             }, 3000);
         },
-        error: function(xhr) {
-            const error = xhr.responseJSON?.error || 'Booking failed. Please try again.';
-            showAlert(error, 'danger');
+        error: function(xhr, status, error) {
+            console.error('Booking error - Status:', status); // Debug log
+            console.error('Booking error - Error:', error); // Debug log
+            console.error('Booking error - XHR:', xhr); // Debug log
+            console.error('Response status:', xhr.status); // Debug log
+            console.error('Response text:', xhr.responseText); // Debug log
+            
+            let errorMessage = 'Booking failed. Please try again.';
+            
+            try {
+                if (xhr.responseJSON) {
+                    console.error('Response JSON:', xhr.responseJSON);
+                    errorMessage = xhr.responseJSON.error || errorMessage;
+                    
+                    // If there are missing fields, show them
+                    if (xhr.responseJSON.missing_fields) {
+                        errorMessage += ` Missing: ${xhr.responseJSON.missing_fields.join(', ')}`;
+                    }
+                    
+                    // If there are details, show them
+                    if (xhr.responseJSON.details) {
+                        errorMessage += ` Details: ${xhr.responseJSON.details}`;
+                    }
+                } else if (xhr.responseText) {
+                    const errorData = JSON.parse(xhr.responseText);
+                    console.error('Parsed error data:', errorData);
+                    errorMessage = errorData.error || errorMessage;
+                    
+                    if (errorData.missing_fields) {
+                        errorMessage += ` Missing: ${errorData.missing_fields.join(', ')}`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                errorMessage = xhr.responseText || errorMessage;
+            }
+            
+            showAlert(errorMessage, 'danger');
             $('#payBtn').prop('disabled', false).html('<i class="bi bi-credit-card"></i> Pay with M-Pesa');
         }
     });
+    
+    return false; // Prevent default form submission
 });
 
-// Clean up on modal close
+// Flag to track if we're transitioning between modals
+let isTransitioningToBooking = false;
+
+// Clean up on modal close - BUT DON'T clear selectedSeats if moving to booking modal
 $('#seatModal').on('hidden.bs.modal', function() {
-    Object.keys(seatLockTimers).forEach(seatId => unlockSeat(seatId));
-    selectedSeats = [];
+    console.log('Seat modal hidden, isTransitioningToBooking:', isTransitioningToBooking);
+    
+    // Only clear if NOT transitioning to booking modal
+    if (!isTransitioningToBooking) {
+        console.log('Clearing seat selections');
+        Object.keys(seatLockTimers).forEach(seatId => unlockSeat(seatId));
+        seatLockTimers = {};
+        selectedSeats = [];
+    } else {
+        console.log('Keeping seat selections for booking');
+    }
 });
 
 $('#bookingModal').on('hidden.bs.modal', function() {
-    // If user closes booking modal, show seat selection again
-    if (selectedSeats.length > 0) {
-        $('#seatModal').modal('show');
+    console.log('Booking modal hidden, selected seats count:', selectedSeats.length);
+    
+    // Reset transition flag
+    isTransitioningToBooking = false;
+    
+    // If user closes booking modal, show seat selection again ONLY if we have seats selected
+    if (selectedSeats.length > 0 && !$('#seatModal').hasClass('show')) {
+        console.log('Reopening seat modal');
+        setTimeout(function() {
+            isTransitioningToBooking = true; // Set flag when going back to seat modal
+            $('#seatModal').modal('show');
+            setTimeout(function() {
+                isTransitioningToBooking = false;
+            }, 500);
+        }, 300);
+    } else if (selectedSeats.length === 0) {
+        console.log('No seats, clearing all data');
+        // User cancelled everything or completed booking, clear the data
+        Object.keys(seatLockTimers).forEach(seatId => unlockSeat(seatId));
+        seatLockTimers = {};
+        selectedSeats = [];
     }
+});
+
+// Verify seats when booking modal opens
+$('#bookingModal').on('show.bs.modal', function() {
+    console.log('Booking modal opening');
+    window.debugSeats(); // Debug info
+    
+    // Verify we still have selected seats when opening booking modal
+    if (!selectedSeats || selectedSeats.length === 0) {
+        console.error('No seats selected when opening booking modal!');
+        showAlert('Seat selection lost. Please reselect seats.', 'warning');
+        $(this).modal('hide');
+        setTimeout(function() {
+            $('#seatModal').modal('show');
+        }, 300);
+        return false;
+    }
+    
+    console.log('Booking modal opened with seats:', selectedSeats);
 });
 </script>
 {% endblock %}
