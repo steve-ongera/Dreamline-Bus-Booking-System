@@ -1,0 +1,609 @@
+{% extends 'admin_base.html' %}
+{% load custom_filters %}
+
+{% load static %}
+
+{% block title %}Routes - Route Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #343a40;
+        margin: 0;
+    }
+    
+    /* Filter section styling */
+    .filter-section {
+        background: white;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    
+    /* Statistics cards */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card.green {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    .stat-card.orange {
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+    }
+    
+    .stat-card.blue {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.9;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    /* Route card styling */
+    .routes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .route-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    
+    .route-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        border-color: #007bff;
+    }
+    
+    .route-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .route-path {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .route-location {
+        font-size: 1.25rem;
+        font-weight: 700;
+        flex: 1;
+    }
+    
+    .route-arrow {
+        font-size: 1.5rem;
+        animation: slideRight 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes slideRight {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(8px); }
+    }
+    
+    .route-meta {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.875rem;
+        opacity: 0.95;
+    }
+    
+    .route-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .route-body {
+        padding: 1.5rem;
+    }
+    
+    .route-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .route-stat {
+        text-align: center;
+    }
+    
+    .route-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #007bff;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .route-stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .route-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .route-actions .btn {
+        flex: 1;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        margin-top: 2rem;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #adb5bd;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state h4 {
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state p {
+        color: #adb5bd;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Active filter badge */
+    .active-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    
+    .filter-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #e7f3ff;
+        color: #0056b3;
+        padding: 0.375rem 0.75rem;
+        border-radius: 2rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .filter-badge button {
+        background: none;
+        border: none;
+        color: #0056b3;
+        cursor: pointer;
+        padding: 0;
+        font-size: 1rem;
+        line-height: 1;
+    }
+    
+    .filter-badge button:hover {
+        color: #dc3545;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .routes-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .route-path {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .route-arrow {
+            transform: rotate(90deg);
+        }
+        
+        .route-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Routes</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="bi bi-signpost-2-fill text-primary"></i>
+            Route Management
+        </h1>
+        <a href="#" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Add New Route
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-signpost-2"></i></div>
+            <div class="stat-value">{{ routes.count }}</div>
+            <div class="stat-label">Total Routes</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-icon"><i class="bi bi-geo-alt"></i></div>
+            <div class="stat-value">{{ locations.count }}</div>
+            <div class="stat-label">Active Locations</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon"><i class="bi bi-calendar-event"></i></div>
+            <div class="stat-value">
+                {% widthratio routes 1 1 as total_trips %}
+                {{ routes|length }}
+            </div>
+            <div class="stat-label">Routes with Trips</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon"><i class="bi bi-signpost"></i></div>
+            <div class="stat-value">-</div>
+            <div class="stat-label">Total Stops</div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-search text-muted"></i> Search Routes
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Search by origin or destination..." 
+                               value="{{ search }}">
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-geo-alt text-muted"></i> Origin
+                    </label>
+                    <select name="origin" class="form-select">
+                        <option value="">All Origins</option>
+                        {% for location in locations %}
+                        <option value="{{ location.id }}" 
+                                {% if selected_origin == location.id|stringformat:"s" %}selected{% endif %}>
+                            {{ location.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-geo text-muted"></i> Destination
+                    </label>
+                    <select name="destination" class="form-select">
+                        <option value="">All Destinations</option>
+                        {% for location in locations %}
+                        <option value="{{ location.id }}" 
+                                {% if selected_destination == location.id|stringformat:"s" %}selected{% endif %}>
+                            {{ location.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    {% if search or selected_origin or selected_destination %}
+                    <a href="{% url 'route_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Active Filters -->
+            {% if search or selected_origin or selected_destination %}
+            <div class="active-filters">
+                <span class="text-muted small">Active filters:</span>
+                {% if search %}
+                <div class="filter-badge">
+                    <i class="bi bi-search"></i>
+                    Search: "{{ search }}"
+                    <button type="button" onclick="clearFilter('search')">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                {% endif %}
+                {% if selected_origin %}
+                <div class="filter-badge">
+                    <i class="bi bi-geo-alt"></i>
+                    Origin: {{ locations|filter_by_id:selected_origin }}
+                    <button type="button" onclick="clearFilter('origin')">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                {% endif %}
+                {% if selected_destination %}
+                <div class="filter-badge">
+                    <i class="bi bi-geo"></i>
+                    Destination: {{ locations|filter_by_id:selected_destination }}
+                    <button type="button" onclick="clearFilter('destination')">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Routes Grid -->
+    {% if routes %}
+    <div class="routes-grid">
+        {% for route in routes %}
+        <div class="route-card">
+            <div class="route-header">
+                <div class="route-path">
+                    <div class="route-location">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        {{ route.origin.name }}
+                    </div>
+                    <div class="route-arrow">
+                        <i class="bi bi-arrow-right-circle-fill"></i>
+                    </div>
+                    <div class="route-location">
+                        <i class="bi bi-geo-fill"></i>
+                        {{ route.destination.name }}
+                    </div>
+                </div>
+                <div class="route-meta">
+                    <div class="route-meta-item">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>{{ route.distance_km }} km</span>
+                    </div>
+                    <div class="route-meta-item">
+                        <i class="bi bi-clock"></i>
+                        <span>{{ route.estimated_duration }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-body">
+                <div class="route-stats">
+                    <div class="route-stat">
+                        <span class="route-stat-value">{{ route.trips_count }}</span>
+                        <span class="route-stat-label">
+                            <i class="bi bi-calendar-event"></i> Trips
+                        </span>
+                    </div>
+                    <div class="route-stat">
+                        <span class="route-stat-value">{{ route.stops_count }}</span>
+                        <span class="route-stat-label">
+                            <i class="bi bi-signpost"></i> Stops
+                        </span>
+                    </div>
+                    <div class="route-stat">
+                        <span class="route-stat-value">
+                            {% if route.is_active %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </span>
+                        <span class="route-stat-label">Status</span>
+                    </div>
+                </div>
+
+                <div class="route-actions">
+                    <a href="{% url 'route_detail' route.pk %}" 
+                       class="btn btn-primary btn-sm">
+                        <i class="bi bi-eye"></i> View
+                    </a>
+                    <a href="{% url 'trip_add' %}?route={{ route.id }}" 
+                       class="btn btn-success btn-sm">
+                        <i class="bi bi-plus"></i> Add Trip
+                    </a>
+                    <a href="#" 
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-signpost-2"></i>
+        </div>
+        <h4>No routes found</h4>
+        <p>
+            {% if search or selected_origin or selected_destination %}
+            No routes match your search criteria. Try adjusting your filters.
+            {% else %}
+            Get started by adding your first route to connect locations.
+            {% endif %}
+        </p>
+        {% if not search and not selected_origin and not selected_destination %}
+        <a href="{% url 'route_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Add Your First Route
+        </a>
+        {% else %}
+        <a href="{% url 'route_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i> Clear Filters
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit on filter change
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', () => {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Clear individual filter
+    function clearFilter(filterName) {
+        const form = document.getElementById('filterForm');
+        const input = form.querySelector(`[name="${filterName}"]`);
+        if (input) {
+            input.value = '';
+            form.submit();
+        }
+    }
+
+    // Add animation to route cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }, index * 100);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.route-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(card);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,536 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}{{ route.origin.name }} to {{ route.destination.name }} - Route Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .route-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .route-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .route-arrow {
+        font-size: 2.5rem;
+    }
+    
+    .route-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .stat-card {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .section-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #343a40;
+    }
+    
+    .stop-timeline {
+        position: relative;
+        padding-left: 2.5rem;
+    }
+    
+    .stop-item {
+        position: relative;
+        padding-bottom: 2rem;
+    }
+    
+    .stop-item:last-child {
+        padding-bottom: 0;
+    }
+    
+    .stop-item::before {
+        content: '';
+        position: absolute;
+        left: -1.75rem;
+        top: 0.5rem;
+        width: 1rem;
+        height: 1rem;
+        background: white;
+        border: 3px solid #007bff;
+        border-radius: 50%;
+        z-index: 2;
+    }
+    
+    .stop-item::after {
+        content: '';
+        position: absolute;
+        left: -1.3rem;
+        top: 1.5rem;
+        width: 2px;
+        height: calc(100% - 0.5rem);
+        background: #dee2e6;
+        z-index: 1;
+    }
+    
+    .stop-item:last-child::after {
+        display: none;
+    }
+    
+    .stop-item.origin::before {
+        background: #28a745;
+        border-color: #28a745;
+    }
+    
+    .stop-item.destination::before {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .stop-content {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border-left: 3px solid #007bff;
+    }
+    
+    .stop-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stop-name {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stop-location {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .stop-badges {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .stop-time {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6c757d;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+    
+    .stop-details {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #dee2e6;
+        font-size: 0.875rem;
+    }
+    
+    .stop-detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    
+    .points-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .point-card {
+        border: 1px solid #e9ecef;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+    }
+    
+    .point-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+    }
+    
+    .point-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.75rem;
+    }
+    
+    .point-name {
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .point-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .trip-card {
+        border: 1px solid #e9ecef;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s;
+    }
+    
+    .trip-card:hover {
+        border-color: #007bff;
+        transform: translateX(4px);
+    }
+    
+    .trip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .trip-date {
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .trip-info {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'route_list' %}">Routes</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ route.origin.name }} → {{ route.destination.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Route Hero Section -->
+    <div class="route-hero">
+        <div class="route-title">
+            <i class="bi bi-geo-alt-fill"></i>
+            <span>{{ route.origin.name }}</span>
+            <span class="route-arrow"><i class="bi bi-arrow-right-circle-fill"></i></span>
+            <span>{{ route.destination.name }}</span>
+        </div>
+        
+        <div class="route-stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ route.distance_km }} km</div>
+                <div class="stat-label">Distance</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ route.estimated_duration }}</div>
+                <div class="stat-label">Est. Duration</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ route_stops.count }}</div>
+                <div class="stat-label">Total Stops</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_trips }}</div>
+                <div class="stat-label">Total Trips</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Route Stops Timeline -->
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-signpost-2"></i>
+                    Route Stops
+                </h3>
+                
+                {% if route_stops %}
+                <div class="stop-timeline">
+                    {% for stop in route_stops %}
+                    <div class="stop-item {% if forloop.first %}origin{% elif forloop.last %}destination{% endif %}">
+                        <div class="stop-content">
+                            <div class="stop-header">
+                                <div>
+                                    <div class="stop-name">
+                                        {% if forloop.first %}
+                                        <i class="bi bi-geo-alt-fill text-success"></i>
+                                        {% elif forloop.last %}
+                                        <i class="bi bi-geo-fill text-danger"></i>
+                                        {% else %}
+                                        <i class="bi bi-geo"></i>
+                                        {% endif %}
+                                        {{ stop.boarding_point.name }}
+                                    </div>
+                                    <div class="stop-location">
+                                        <i class="bi bi-pin-map"></i> {{ stop.boarding_point.location.name }}
+                                    </div>
+                                </div>
+                                <div class="stop-badges">
+                                    {% if stop.is_pickup %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-arrow-up-circle"></i> Pickup
+                                    </span>
+                                    {% endif %}
+                                    {% if stop.is_dropoff %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-arrow-down-circle"></i> Dropoff
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="stop-time">
+                                <i class="bi bi-clock"></i>
+                                <strong>{{ stop.time_from_origin }}</strong> from origin
+                            </div>
+                            
+                            <div class="stop-details">
+                                {% if stop.boarding_point.address %}
+                                <div class="stop-detail-item">
+                                    <i class="bi bi-building"></i>
+                                    {{ stop.boarding_point.address }}
+                                </div>
+                                {% endif %}
+                                {% if stop.boarding_point.landmark %}
+                                <div class="stop-detail-item">
+                                    <i class="bi bi-signpost"></i>
+                                    Landmark: {{ stop.boarding_point.landmark }}
+                                </div>
+                                {% endif %}
+                                {% if stop.boarding_point.contact_phone %}
+                                <div class="stop-detail-item">
+                                    <i class="bi bi-telephone"></i>
+                                    {{ stop.boarding_point.contact_phone }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    No stops configured for this route yet.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Boarding Points Section -->
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-arrow-up-circle text-success"></i>
+                    Pickup Points ({{ pickup_points.count }})
+                </h3>
+                
+                {% if pickup_points %}
+                <div class="points-grid">
+                    {% for stop in pickup_points %}
+                    <div class="point-card">
+                        <div class="point-header">
+                            <div class="point-name">{{ stop.boarding_point.name }}</div>
+                            <span class="badge bg-success">Stop #{{ stop.stop_order }}</span>
+                        </div>
+                        <div class="point-info">
+                            <div>
+                                <i class="bi bi-geo-alt"></i> {{ stop.boarding_point.location.name }}
+                            </div>
+                            <div>
+                                <i class="bi bi-clock"></i> {{ stop.time_from_origin }} from start
+                            </div>
+                            {% if stop.boarding_point.landmark %}
+                            <div>
+                                <i class="bi bi-signpost"></i> {{ stop.boarding_point.landmark }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No pickup points configured.</p>
+                {% endif %}
+            </div>
+
+            <!-- Dropoff Points Section -->
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-arrow-down-circle text-info"></i>
+                    Dropoff Points ({{ dropoff_points.count }})
+                </h3>
+                
+                {% if dropoff_points %}
+                <div class="points-grid">
+                    {% for stop in dropoff_points %}
+                    <div class="point-card">
+                        <div class="point-header">
+                            <div class="point-name">{{ stop.boarding_point.name }}</div>
+                            <span class="badge bg-info">Stop #{{ stop.stop_order }}</span>
+                        </div>
+                        <div class="point-info">
+                            <div>
+                                <i class="bi bi-geo-alt"></i> {{ stop.boarding_point.location.name }}
+                            </div>
+                            <div>
+                                <i class="bi bi-clock"></i> {{ stop.time_from_origin }} from start
+                            </div>
+                            {% if stop.boarding_point.landmark %}
+                            <div>
+                                <i class="bi bi-signpost"></i> {{ stop.boarding_point.landmark }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No dropoff points configured.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-lightning"></i>
+                    Quick Actions
+                </h3>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'trip_add' %}?route={{ route.id }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Schedule Trip
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil"></i> Edit Route
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-signpost-2"></i> Manage Stops
+                    </a>
+                </div>
+            </div>
+
+            <!-- Upcoming Trips -->
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-calendar-event"></i>
+                    Upcoming Trips
+                </h3>
+                
+                {% if upcoming_trips %}
+                <div>
+                    {% for trip in upcoming_trips %}
+                    <div class="trip-card">
+                        <div class="trip-header">
+                            <div class="trip-date">
+                                <i class="bi bi-calendar3"></i>
+                                {{ trip.departure_date|date:"M d, Y" }}
+                            </div>
+                            <span class="badge bg-primary">{{ trip.status|capfirst }}</span>
+                        </div>
+                        <div class="trip-info">
+                            <div>
+                                <i class="bi bi-clock"></i>
+                                {{ trip.departure_time|time:"g:i A" }}
+                            </div>
+                            <div>
+                                <i class="bi bi-bus-front"></i>
+                                {{ trip.bus.bus_name }}
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="{% url 'trip_detail' trip.pk %}" class="btn btn-sm btn-outline-primary w-100">
+                                View Trip <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    No upcoming trips scheduled.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Route Statistics -->
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-graph-up"></i>
+                    Statistics
+                </h3>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-calendar-check"></i> Total Trips</span>
+                        <span class="badge bg-primary rounded-pill">{{ total_trips }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock-history"></i> Active Trips</span>
+                        <span class="badge bg-success rounded-pill">{{ active_trips }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-signpost-2"></i> Route Stops</span>
+                        <span class="badge bg-info rounded-pill">{{ route_stops.count }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
