@@ -1,0 +1,436 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}All Bookings - Booking Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #343a40;
+        margin: 0;
+    }
+    
+    .filter-section {
+        background: white;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .booking-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .booking-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        border-color: #007bff;
+    }
+    
+    .booking-header {
+        background: #f8f9fa;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .booking-ref {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #007bff;
+    }
+    
+    .booking-body {
+        padding: 1.25rem;
+    }
+    
+    .booking-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .info-icon {
+        width: 36px;
+        height: 36px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #007bff;
+        border-radius: 6px;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.125rem;
+    }
+    
+    .info-value {
+        font-weight: 600;
+        color: #343a40;
+        font-size: 0.875rem;
+    }
+    
+    .route-display {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .stats-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        padding: 1.25rem;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .empty-state {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">All Bookings</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="bi bi-ticket-perforated text-primary"></i>
+            Booking Management
+        </h1>
+        <a href="{% url 'export_bookings' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number text-primary">{{ all_count }}</div>
+                <div class="stats-label">Total Bookings</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number text-warning">{{ pending_payments_count }}</div>
+                <div class="stats-label">Pending Payments</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number text-success">{{ confirmed_count }}</div>
+                <div class="stats-label">Confirmed</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number text-danger">{{ cancelled_count }}</div>
+                <div class="stats-label">Cancelled</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Ref, name, phone, email..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Booking Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for value, label in booking_statuses %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Payment Status</label>
+                    <select name="payment_status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for value, label in payment_statuses %}
+                        <option value="{{ value }}" {% if selected_payment_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-3">
+                    <label class="form-label">Operator</label>
+                    <select name="operator" class="form-select">
+                        <option value="">All Operators</option>
+                        {% for op in operators %}
+                        <option value="{{ op.id }}" {% if selected_operator == op.id|stringformat:"s" %}selected{% endif %}>
+                            {{ op.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Route</label>
+                    <select name="route" class="form-select">
+                        <option value="">All Routes</option>
+                        {% for route in routes %}
+                        <option value="{{ route.route__origin_id }}-{{ route.route__destination_id }}" 
+                                {% if selected_route == route.route__origin_id|stringformat:"s"|add:"-"|add:route.route__destination_id|stringformat:"s" %}selected{% endif %}>
+                            {{ route.route__origin__name }} → {{ route.route__destination__name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bookings List -->
+    {% if bookings %}
+    <div class="row">
+        {% for booking in bookings %}
+        <div class="col-12">
+            <div class="booking-card">
+                <div class="booking-header">
+                    <div>
+                        <div class="booking-ref">{{ booking.booking_reference }}</div>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar3 me-1"></i>{{ booking.created_at|date:"M d, Y H:i" }}
+                        </small>
+                    </div>
+                    <span class="badge {% if booking.status == 'paid' or booking.status == 'confirmed' %}bg-success{% elif booking.status == 'pending' %}bg-warning{% elif booking.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                        {{ booking.get_status_display }}
+                    </span>
+                </div>
+
+                <div class="booking-body">
+                    <div class="booking-info">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Customer</div>
+                                <div class="info-value">{{ booking.customer_full_name }}</div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-telephone"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Phone</div>
+                                <div class="info-value">{{ booking.customer_phone }}</div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-geo-alt"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Route</div>
+                                <div class="route-display">
+                                    <span>{{ booking.trip.route.origin.name }}</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span>{{ booking.trip.route.destination.name }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-calendar-event"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Travel Date</div>
+                                <div class="info-value">{{ booking.trip.departure_date|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-grid-3x3"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Seats ({{ booking.seats_count }})</div>
+                                <div class="info-value">
+                                    {% for sb in booking.seat_bookings.all %}
+                                        {{ sb.seat.seat_number }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-cash"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Total Amount</div>
+                                <div class="info-value">KES {{ booking.total_amount|floatformat:2 }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'booking_detail' booking.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </a>
+                        {% if booking.status == 'pending' %}
+                        <button class="btn btn-outline-danger btn-sm" onclick="cancelBooking({{ booking.pk }})">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-ticket-perforated"></i>
+        </div>
+        <h4 class="text-muted">No bookings found</h4>
+        <p class="text-muted mb-0">Try adjusting your filters</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Cancel Booking Modal -->
+<form id="cancelForm" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', () => {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    function cancelBooking(bookingId) {
+        if (confirm('Are you sure you want to cancel this booking?')) {
+            const form = document.getElementById('cancelForm');
+            form.action = `/admin-bookings/${bookingId}/cancel/`;
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

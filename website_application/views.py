@@ -1558,3 +1558,588 @@ def get_route_details(request, route_id):
         'distance': str(route.distance_km),
         'duration': str(route.estimated_duration),
     })
+
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Q, Count, Sum, Prefetch
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime, timedelta
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+from .models import (
+    Booking, SeatBooking, Payment, Trip, BusOperator, 
+    Location, BoardingPoint
+)
+
+
+@staff_member_required
+def booking_list(request):
+    """View for all bookings with filters and search"""
+    
+    # Get filter parameters
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    payment_status = request.GET.get('payment_status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    operator = request.GET.get('operator', '')
+    route = request.GET.get('route', '')
+    
+    # Base queryset with related data
+    bookings = Booking.objects.select_related(
+        'trip__bus__operator',
+        'trip__route__origin',
+        'trip__route__destination',
+        'boarding_point__location',
+        'dropping_point__location'
+    ).prefetch_related(
+        'seat_bookings__seat',
+        'payments'
+    ).annotate(
+        seats_count=Count('seat_bookings')
+    ).order_by('-created_at')
+    
+    # Apply search filter
+    if search:
+        bookings = bookings.filter(
+            Q(booking_reference__icontains=search) |
+            Q(customer_full_name__icontains=search) |
+            Q(customer_phone__icontains=search) |
+            Q(customer_email__icontains=search) |
+            Q(customer_id_number__icontains=search)
+        )
+    
+    # Apply status filter
+    if status:
+        bookings = bookings.filter(status=status)
+    
+    # Apply payment status filter (check latest payment)
+    if payment_status:
+        bookings = bookings.filter(payments__status=payment_status).distinct()
+    
+    # Apply date range filter
+    if date_from:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        bookings = bookings.filter(trip__departure_date__gte=date_from_obj)
+    
+    if date_to:
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+        bookings = bookings.filter(trip__departure_date__lte=date_to_obj)
+    
+    # Apply operator filter
+    if operator:
+        bookings = bookings.filter(trip__bus__operator_id=operator)
+    
+    # Apply route filter
+    if route:
+        origin_id, destination_id = route.split('-')
+        bookings = bookings.filter(
+            trip__route__origin_id=origin_id,
+            trip__route__destination_id=destination_id
+        )
+    
+    # Get counts for badges
+    all_count = bookings.count()
+    pending_payments_count = Booking.objects.filter(
+        status='pending'
+    ).count()
+    confirmed_count = bookings.filter(status__in=['paid', 'confirmed']).count()
+    cancelled_count = bookings.filter(status='cancelled').count()
+    
+    # Get operators for filter
+    operators = BusOperator.objects.filter(is_active=True)
+    
+    # Get unique routes for filter
+    routes = Trip.objects.select_related(
+        'route__origin', 'route__destination'
+    ).values(
+        'route__origin_id',
+        'route__origin__name',
+        'route__destination_id',
+        'route__destination__name'
+    ).distinct()
+    
+    # Booking status choices
+    booking_statuses = Booking.BOOKING_STATUS_CHOICES
+    payment_statuses = Payment.PAYMENT_STATUS_CHOICES
+    
+    context = {
+        'bookings': bookings,
+        'search': search,
+        'selected_status': status,
+        'selected_payment_status': payment_status,
+        'date_from': date_from,
+        'date_to': date_to,
+        'selected_operator': operator,
+        'selected_route': route,
+        'all_count': all_count,
+        'pending_payments_count': pending_payments_count,
+        'confirmed_count': confirmed_count,
+        'cancelled_count': cancelled_count,
+        'operators': operators,
+        'routes': routes,
+        'booking_statuses': booking_statuses,
+        'payment_statuses': payment_statuses,
+    }
+    
+    return render(request, 'admin/bookings/booking_list.html', context)
+
+
+@staff_member_required
+def booking_detail(request, booking_id):
+    """View for booking details"""
+    
+    booking = get_object_or_404(
+        Booking.objects.select_related(
+            'trip__bus__operator',
+            'trip__bus__seat_layout',
+            'trip__route__origin',
+            'trip__route__destination',
+            'boarding_point__location',
+            'dropping_point__location'
+        ).prefetch_related(
+            'seat_bookings__seat',
+            'payments',
+            'trip__bus__amenities'
+        ),
+        pk=booking_id
+    )
+    
+    # Get seat bookings with details
+    seat_bookings = booking.seat_bookings.all()
+    
+    # Get payment history
+    payments = booking.payments.order_by('-created_at')
+    
+    # Calculate payment summary
+    total_paid = payments.filter(status='completed').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    balance = booking.total_amount - total_paid
+    
+    context = {
+        'booking': booking,
+        'seat_bookings': seat_bookings,
+        'payments': payments,
+        'total_paid': total_paid,
+        'balance': balance,
+    }
+    
+    return render(request, 'admin/bookings/booking_detail.html', context)
+
+
+@staff_member_required
+def pending_payments(request):
+    """View for bookings with pending payments"""
+    
+    # Get filter parameters
+    search = request.GET.get('search', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Base queryset
+    bookings = Booking.objects.filter(
+        status='pending'
+    ).select_related(
+        'trip__bus__operator',
+        'trip__route__origin',
+        'trip__route__destination'
+    ).prefetch_related(
+        'seat_bookings',
+        'payments'
+    ).annotate(
+        seats_count=Count('seat_bookings')
+    ).order_by('-created_at')
+    
+    # Apply search filter
+    if search:
+        bookings = bookings.filter(
+            Q(booking_reference__icontains=search) |
+            Q(customer_full_name__icontains=search) |
+            Q(customer_phone__icontains=search)
+        )
+    
+    # Apply date range filter
+    if date_from:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        bookings = bookings.filter(created_at__date__gte=date_from_obj)
+    
+    if date_to:
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+        bookings = bookings.filter(created_at__date__lte=date_to_obj)
+    
+    context = {
+        'bookings': bookings,
+        'search': search,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'admin/bookings/pending_payments.html', context)
+
+
+@staff_member_required
+def payment_list(request):
+    """View for all payment transactions"""
+    
+    # Get filter parameters
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    method = request.GET.get('method', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Base queryset
+    payments = Payment.objects.select_related(
+        'booking__trip__route__origin',
+        'booking__trip__route__destination'
+    ).order_by('-created_at')
+    
+    # Apply search filter
+    if search:
+        payments = payments.filter(
+            Q(transaction_id__icontains=search) |
+            Q(booking__booking_reference__icontains=search) |
+            Q(booking__customer_full_name__icontains=search) |
+            Q(mpesa_phone__icontains=search) |
+            Q(mpesa_receipt__icontains=search)
+        )
+    
+    # Apply status filter
+    if status:
+        payments = payments.filter(status=status)
+    
+    # Apply payment method filter
+    if method:
+        payments = payments.filter(payment_method=method)
+    
+    # Apply date range filter
+    if date_from:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        payments = payments.filter(created_at__date__gte=date_from_obj)
+    
+    if date_to:
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+        payments = payments.filter(created_at__date__lte=date_to_obj)
+    
+    # Calculate summary statistics
+    total_payments = payments.filter(status='completed').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    pending_amount = payments.filter(status='pending').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    failed_count = payments.filter(status='failed').count()
+    
+    context = {
+        'payments': payments,
+        'search': search,
+        'selected_status': status,
+        'selected_method': method,
+        'date_from': date_from,
+        'date_to': date_to,
+        'payment_statuses': Payment.PAYMENT_STATUS_CHOICES,
+        'payment_methods': Payment.PAYMENT_METHOD_CHOICES,
+        'total_payments': total_payments,
+        'pending_amount': pending_amount,
+        'failed_count': failed_count,
+    }
+    
+    return render(request, 'admin/bookings/payment_list.html', context)
+
+
+@staff_member_required
+def export_bookings(request):
+    """Export bookings to Excel"""
+    
+    # Get filter parameters (same as booking_list)
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    payment_status = request.GET.get('payment_status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    operator = request.GET.get('operator', '')
+    
+    # Apply same filters as booking_list
+    bookings = Booking.objects.select_related(
+        'trip__bus__operator',
+        'trip__route__origin',
+        'trip__route__destination',
+        'boarding_point__location',
+        'dropping_point__location'
+    ).prefetch_related(
+        'seat_bookings__seat',
+        'payments'
+    ).order_by('-created_at')
+    
+    if search:
+        bookings = bookings.filter(
+            Q(booking_reference__icontains=search) |
+            Q(customer_full_name__icontains=search) |
+            Q(customer_phone__icontains=search) |
+            Q(customer_email__icontains=search)
+        )
+    
+    if status:
+        bookings = bookings.filter(status=status)
+    
+    if payment_status:
+        bookings = bookings.filter(payments__status=payment_status).distinct()
+    
+    if date_from:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        bookings = bookings.filter(trip__departure_date__gte=date_from_obj)
+    
+    if date_to:
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+        bookings = bookings.filter(trip__departure_date__lte=date_to_obj)
+    
+    if operator:
+        bookings = bookings.filter(trip__bus__operator_id=operator)
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Bookings"
+    
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="0066CC", end_color="0066CC", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Headers
+    headers = [
+        'Booking Ref',
+        'Customer Name',
+        'ID Number',
+        'Phone',
+        'Email',
+        'Route',
+        'Travel Date',
+        'Departure Time',
+        'Bus',
+        'Operator',
+        'Boarding Point',
+        'Dropping Point',
+        'Seats',
+        'Total Amount',
+        'Status',
+        'Payment Status',
+        'Booking Date'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+    
+    # Write data
+    for row_idx, booking in enumerate(bookings, start=2):
+        # Get seat numbers
+        seat_numbers = ', '.join([
+            sb.seat.seat_number for sb in booking.seat_bookings.all()
+        ])
+        
+        # Get latest payment status
+        latest_payment = booking.payments.order_by('-created_at').first()
+        payment_status_display = latest_payment.get_status_display() if latest_payment else 'No Payment'
+        
+        data = [
+            booking.booking_reference,
+            booking.customer_full_name,
+            booking.customer_id_number,
+            booking.customer_phone,
+            booking.customer_email,
+            f"{booking.trip.route.origin.name} → {booking.trip.route.destination.name}",
+            booking.trip.departure_date.strftime('%Y-%m-%d'),
+            booking.trip.departure_time.strftime('%H:%M'),
+            booking.trip.bus.bus_name,
+            booking.trip.bus.operator.name,
+            f"{booking.boarding_point.location.name} - {booking.boarding_point.name}",
+            f"{booking.dropping_point.location.name} - {booking.dropping_point.name}",
+            seat_numbers,
+            float(booking.total_amount),
+            booking.get_status_display(),
+            payment_status_display,
+            booking.created_at.strftime('%Y-%m-%d %H:%M')
+        ]
+        
+        for col_idx, value in enumerate(data, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.value = value
+            cell.border = border
+            cell.alignment = Alignment(vertical="center")
+    
+    # Adjust column widths
+    column_widths = [15, 25, 15, 15, 30, 30, 12, 12, 20, 20, 30, 30, 15, 12, 12, 15, 18]
+    for idx, width in enumerate(column_widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+    
+    # Freeze header row
+    ws.freeze_panes = ws['A2']
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=bookings_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    wb.save(response)
+    return response
+
+
+@staff_member_required
+def export_payments(request):
+    """Export payments to Excel"""
+    
+    # Get filter parameters
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    method = request.GET.get('method', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply filters
+    payments = Payment.objects.select_related(
+        'booking__trip__route__origin',
+        'booking__trip__route__destination'
+    ).order_by('-created_at')
+    
+    if search:
+        payments = payments.filter(
+            Q(transaction_id__icontains=search) |
+            Q(booking__booking_reference__icontains=search) |
+            Q(mpesa_receipt__icontains=search)
+        )
+    
+    if status:
+        payments = payments.filter(status=status)
+    
+    if method:
+        payments = payments.filter(payment_method=method)
+    
+    if date_from:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        payments = payments.filter(created_at__date__gte=date_from_obj)
+    
+    if date_to:
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+        payments = payments.filter(created_at__date__lte=date_to_obj)
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Payments"
+    
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="28A745", end_color="28A745", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Headers
+    headers = [
+        'Transaction ID',
+        'Booking Ref',
+        'Customer Name',
+        'Payment Method',
+        'Amount',
+        'Status',
+        'M-Pesa Phone',
+        'M-Pesa Receipt',
+        'Route',
+        'Travel Date',
+        'Payment Date'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+    
+    # Write data
+    for row_idx, payment in enumerate(payments, start=2):
+        data = [
+            payment.transaction_id,
+            payment.booking.booking_reference,
+            payment.booking.customer_full_name,
+            payment.get_payment_method_display(),
+            float(payment.amount),
+            payment.get_status_display(),
+            payment.mpesa_phone or 'N/A',
+            payment.mpesa_receipt or 'N/A',
+            f"{payment.booking.trip.route.origin.name} → {payment.booking.trip.route.destination.name}",
+            payment.booking.trip.departure_date.strftime('%Y-%m-%d'),
+            payment.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        ]
+        
+        for col_idx, value in enumerate(data, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.value = value
+            cell.border = border
+            cell.alignment = Alignment(vertical="center")
+    
+    # Adjust column widths
+    column_widths = [20, 15, 25, 15, 12, 12, 15, 20, 30, 12, 20]
+    for idx, width in enumerate(column_widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+    
+    # Freeze header row
+    ws.freeze_panes = ws['A2']
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=payments_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    wb.save(response)
+    return response
+
+
+@staff_member_required
+def cancel_booking(request, booking_id):
+    """Cancel a booking"""
+    booking = get_object_or_404(Booking, pk=booking_id)
+    
+    if request.method == 'POST':
+        if booking.status not in ['cancelled', 'completed']:
+            booking.status = 'cancelled'
+            booking.save()
+            
+            # Update seat availability
+            for seat_booking in booking.seat_bookings.all():
+                seat_booking.seat.is_available = True
+                seat_booking.seat.save()
+        
+        return redirect('booking_detail', booking_id=booking.id)
+    
+    return redirect('booking_detail', booking_id=booking.id)

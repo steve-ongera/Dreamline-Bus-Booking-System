@@ -1,0 +1,396 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Payments - Payment Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #343a40;
+        margin: 0;
+    }
+    
+    .filter-section {
+        background: white;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .stats-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        padding: 1.25rem;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    
+    .stats-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .payment-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .payment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    
+    .payment-header {
+        background: #f8f9fa;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .transaction-id {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #343a40;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .payment-body {
+        padding: 1.25rem;
+    }
+    
+    .payment-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .info-icon {
+        width: 36px;
+        height: 36px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #28a745;
+        border-radius: 6px;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.125rem;
+    }
+    
+    .info-value {
+        font-weight: 600;
+        color: #343a40;
+        font-size: 0.875rem;
+    }
+    
+    .empty-state {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Payments</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="bi bi-credit-card text-success"></i>
+            Payment Transactions
+        </h1>
+        <a href="{% url 'export_payments' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-number text-success">KES {{ total_payments|floatformat:2 }}</div>
+                <div class="stats-label">Total Completed Payments</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-number text-warning">KES {{ pending_amount|floatformat:2 }}</div>
+                <div class="stats-label">Pending Payments</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-number text-danger">{{ failed_count }}</div>
+                <div class="stats-label">Failed Transactions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Transaction ID, booking ref..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for value, label in payment_statuses %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Payment Method</label>
+                    <select name="method" class="form-select">
+                        <option value="">All Methods</option>
+                        {% for value, label in payment_methods %}
+                        <option value="{{ value }}" {% if selected_method == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payments List -->
+    {% if payments %}
+    <div class="row">
+        {% for payment in payments %}
+        <div class="col-12">
+            <div class="payment-card">
+                <div class="payment-header">
+                    <div>
+                        <div class="transaction-id">{{ payment.transaction_id }}</div>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar3 me-1"></i>{{ payment.created_at|date:"M d, Y H:i" }}
+                        </small>
+                    </div>
+                    <span class="badge {% if payment.status == 'completed' %}bg-success{% elif payment.status == 'pending' %}bg-warning{% elif payment.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                        {{ payment.get_status_display }}
+                    </span>
+                </div>
+
+                <div class="payment-body">
+                    <div class="payment-info">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-ticket-perforated"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Booking Reference</div>
+                                <div class="info-value">
+                                    <a href="{% url 'booking_detail' payment.booking.pk %}">
+                                        {{ payment.booking.booking_reference }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Customer</div>
+                                <div class="info-value">{{ payment.booking.customer_full_name }}</div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-credit-card-2-front"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Payment Method</div>
+                                <div class="info-value">{{ payment.get_payment_method_display }}</div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-cash"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Amount</div>
+                                <div class="info-value text-success">KES {{ payment.amount|floatformat:2 }}</div>
+                            </div>
+                        </div>
+
+                        {% if payment.mpesa_phone %}
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-phone"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">M-Pesa Phone</div>
+                                <div class="info-value">{{ payment.mpesa_phone }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if payment.mpesa_receipt %}
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-receipt"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">M-Pesa Receipt</div>
+                                <div class="info-value">{{ payment.mpesa_receipt }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-geo-alt"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Route</div>
+                                <div class="info-value">
+                                    {{ payment.booking.trip.route.origin.name }} → {{ payment.booking.trip.route.destination.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div class="info-details">
+                                <div class="info-label">Travel Date</div>
+                                <div class="info-value">{{ payment.booking.trip.departure_date|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <a href="{% url 'booking_detail' payment.booking.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i> View Booking
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-credit-card"></i>
+        </div>
+        <h4 class="text-muted">No payment transactions found</h4>
+        <p class="text-muted mb-0">Try adjusting your filters</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', () => {
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>
+{% endblock %}

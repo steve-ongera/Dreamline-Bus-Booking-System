@@ -1,0 +1,546 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Booking {{ booking.booking_reference }} - Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .booking-ref-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #007bff;
+        margin: 0;
+    }
+    
+    .detail-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .detail-card-header {
+        background: #f8f9fa;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        font-weight: 600;
+        color: #343a40;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .detail-card-body {
+        padding: 1.5rem;
+    }
+    
+    .detail-row {
+        display: flex;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        flex: 0 0 180px;
+        font-weight: 500;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .detail-value {
+        flex: 1;
+        color: #343a40;
+        font-weight: 500;
+    }
+    
+    .route-display {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .seat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .seat-item {
+        border: 2px solid #007bff;
+        background: #e7f3ff;
+        padding: 0.75rem;
+        text-align: center;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #007bff;
+    }
+    
+    .seat-class {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .payment-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .payment-item {
+        position: relative;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: #f8f9fa;
+        border-left: 3px solid #e9ecef;
+    }
+    
+    .payment-item::before {
+        content: '';
+        position: absolute;
+        left: -2.5rem;
+        top: 1.25rem;
+        width: 1rem;
+        height: 1rem;
+        background: white;
+        border: 3px solid #007bff;
+        border-radius: 50%;
+    }
+    
+    .payment-item.completed::before {
+        border-color: #28a745;
+        background: #28a745;
+    }
+    
+    .payment-item.failed::before {
+        border-color: #dc3545;
+        background: #dc3545;
+    }
+    
+    .payment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .payment-id {
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .payment-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .payment-detail {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .payment-detail-label {
+        color: #6c757d;
+        font-size: 0.75rem;
+    }
+    
+    .payment-detail-value {
+        font-weight: 500;
+        color: #343a40;
+    }
+    
+    .summary-box {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .summary-row:last-child {
+        border-bottom: none;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #343a40;
+        padding-top: 1rem;
+    }
+    
+    .status-badge-large {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+    }
+    
+    .amenities-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .amenity-badge {
+        background: #e7f3ff;
+        color: #007bff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'booking_list' %}">Bookings</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ booking.booking_reference }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <div class="page-header">
+        <h1 class="booking-ref-title">
+            <i class="bi bi-ticket-detailed"></i>
+            {{ booking.booking_reference }}
+        </h1>
+        <div class="d-flex gap-2">
+            <span class="badge {% if booking.status == 'paid' or booking.status == 'confirmed' %}bg-success{% elif booking.status == 'pending' %}bg-warning{% elif booking.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %} status-badge-large">
+                {{ booking.get_status_display }}
+            </span>
+            <a href="{% url 'booking_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Bookings
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Customer Information -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-person-circle"></i>
+                    Customer Information
+                </div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Full Name</div>
+                        <div class="detail-value">{{ booking.customer_full_name }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">ID Number</div>
+                        <div class="detail-value">{{ booking.customer_id_number }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value">{{ booking.customer_email }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Phone</div>
+                        <div class="detail-value">{{ booking.customer_phone }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trip Information -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-bus-front"></i>
+                    Trip Information
+                </div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Route</div>
+                        <div class="detail-value">
+                            <div class="route-display">
+                                <span>{{ booking.trip.route.origin.name }}</span>
+                                <i class="bi bi-arrow-right text-primary"></i>
+                                <span>{{ booking.trip.route.destination.name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Travel Date</div>
+                        <div class="detail-value">{{ booking.trip.departure_date|date:"l, F d, Y" }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Departure Time</div>
+                        <div class="detail-value">{{ booking.trip.departure_time|time:"g:i A" }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Arrival Time</div>
+                        <div class="detail-value">{{ booking.trip.arrival_time|time:"g:i A" }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Bus</div>
+                        <div class="detail-value">
+                            {{ booking.trip.bus.bus_name }} ({{ booking.trip.bus.registration_number }})
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Operator</div>
+                        <div class="detail-value">{{ booking.trip.bus.operator.name }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Bus Type</div>
+                        <div class="detail-value">{{ booking.trip.bus.get_bus_type_display }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Amenities</div>
+                        <div class="detail-value">
+                            <div class="amenities-list">
+                                {% for amenity in booking.trip.bus.amenities.all %}
+                                <span class="amenity-badge">
+                                    {{ amenity.icon }} {{ amenity.name }}
+                                </span>
+                                {% empty %}
+                                <span class="text-muted">No amenities listed</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Journey Details -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-geo-alt"></i>
+                    Journey Details
+                </div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Boarding Point</div>
+                        <div class="detail-value">
+                            <strong>{{ booking.boarding_point.location.name }}</strong> - {{ booking.boarding_point.name }}
+                            {% if booking.boarding_point.address %}
+                            <br><small class="text-muted">{{ booking.boarding_point.address }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Dropping Point</div>
+                        <div class="detail-value">
+                            <strong>{{ booking.dropping_point.location.name }}</strong> - {{ booking.dropping_point.name }}
+                            {% if booking.dropping_point.address %}
+                            <br><small class="text-muted">{{ booking.dropping_point.address }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seat Information -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-grid-3x3"></i>
+                    Seat Information
+                </div>
+                <div class="detail-card-body">
+                    <p class="mb-2"><strong>{{ seat_bookings.count }} Seat(s) Booked</strong></p>
+                    <div class="seat-grid">
+                        {% for sb in seat_bookings %}
+                        <div class="seat-item">
+                            <div>{{ sb.seat.seat_number }}</div>
+                            <div class="seat-class">{{ sb.seat.get_seat_class_display }}</div>
+                            <div class="seat-class">{{ sb.seat.get_position_display }}</div>
+                            <div class="text-primary mt-1"><small>KES {{ sb.fare }}</small></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-clock-history"></i>
+                    Payment History
+                </div>
+                <div class="detail-card-body">
+                    {% if payments %}
+                    <div class="payment-timeline">
+                        {% for payment in payments %}
+                        <div class="payment-item {% if payment.status == 'completed' %}completed{% elif payment.status == 'failed' %}failed{% endif %}">
+                            <div class="payment-header">
+                                <div class="payment-id">{{ payment.transaction_id }}</div>
+                                <span class="badge {% if payment.status == 'completed' %}bg-success{% elif payment.status == 'pending' %}bg-warning{% elif payment.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ payment.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="payment-details">
+                                <div class="payment-detail">
+                                    <span class="payment-detail-label">Method</span>
+                                    <span class="payment-detail-value">{{ payment.get_payment_method_display }}</span>
+                                </div>
+                                <div class="payment-detail">
+                                    <span class="payment-detail-label">Amount</span>
+                                    <span class="payment-detail-value">KES {{ payment.amount|floatformat:2 }}</span>
+                                </div>
+                                {% if payment.mpesa_phone %}
+                                <div class="payment-detail">
+                                    <span class="payment-detail-label">M-Pesa Phone</span>
+                                    <span class="payment-detail-value">{{ payment.mpesa_phone }}</span>
+                                </div>
+                                {% endif %}
+                                {% if payment.mpesa_receipt %}
+                                <div class="payment-detail">
+                                    <span class="payment-detail-label">M-Pesa Receipt</span>
+                                    <span class="payment-detail-value">{{ payment.mpesa_receipt }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="payment-detail">
+                                    <span class="payment-detail-label">Date</span>
+                                    <span class="payment-detail-value">{{ payment.created_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No payment transactions yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Booking Summary -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-receipt"></i>
+                    Booking Summary
+                </div>
+                <div class="detail-card-body">
+                    <div class="summary-box">
+                        <div class="summary-row">
+                            <span>Total Amount</span>
+                            <strong>KES {{ booking.total_amount|floatformat:2 }}</strong>
+                        </div>
+                        <div class="summary-row">
+                            <span>Amount Paid</span>
+                            <strong class="text-success">KES {{ total_paid|floatformat:2 }}</strong>
+                        </div>
+                        <div class="summary-row">
+                            <span>Balance</span>
+                            <strong class="{% if balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                                KES {{ balance|floatformat:2 }}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Details -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-info-circle"></i>
+                    Booking Details
+                </div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Booked On</div>
+                        <div class="detail-value">{{ booking.created_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Last Updated</div>
+                        <div class="detail-value">{{ booking.updated_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Number of Seats</div>
+                        <div class="detail-value">{{ seat_bookings.count }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <i class="bi bi-gear"></i>
+                    Actions
+                </div>
+                <div class="detail-card-body">
+                    <div class="d-grid gap-2">
+                        {% if booking.status == 'pending' %}
+                        <button class="btn btn-danger" onclick="cancelBooking({{ booking.pk }})">
+                            <i class="bi bi-x-circle me-1"></i> Cancel Booking
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'booking_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to All Bookings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Form -->
+<form id="cancelForm" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function cancelBooking(bookingId) {
+        if (confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+            const form = document.getElementById('cancelForm');
+            form.action = `/admin-bookings/${bookingId}/cancel/`;
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

@@ -55,5 +55,16 @@ urlpatterns = [
     
     # AJAX/API URLs
     path('trips/route/<int:route_id>/details/', views.get_route_details, name='route_details'),
+
+    # Booking Management
+    path('admin-bookings/', views.booking_list, name='booking_list'),
+    path('admin-bookings/<int:booking_id>/', views.booking_detail, name='booking_detail'),
+    path('admin-bookings/<int:booking_id>/cancel/', views.cancel_booking, name='cancel_booking'),
+    path('admin-bookings/pending-payments/', views.pending_payments, name='pending_payments'),
+    path('admin-bookings/export/', views.export_bookings, name='export_bookings'),
+    
+    # Payment Management
+    path('admin-payments/', views.payment_list, name='payment_list'),
+    path('admin-payments/export/', views.export_payments, name='export_payments'),
     
 ]
