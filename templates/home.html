@@ -1,187 +1,779 @@
 <!-- templates/home.html -->
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #e63946;
+        --secondary-color: #1d3557;
+        --accent-color: #f1faee;
+        --success-color: #06d6a0;
+        --warning-color: #ffd60a;
+    }
+
+    /* Hero Section - Simplified */
+    .hero-section {
+        position: relative;
+        min-height: 90vh;
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #152841 100%);
+        display: flex;
+        align-items: center;
+        padding: 6rem 0 4rem;
+    }
+
+    .hero-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.05;
+        background-image: 
+            repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.1) 35px, rgba(255,255,255,.1) 70px);
+    }
+
+    /* Hero Content */
+    .hero-content-main {
+        position: relative;
+        z-index: 2;
+        color: white;
+    }
+
+    .hero-text {
+        text-align: left;
+    }
+
+    .hero-badge {
+        display: inline-block;
+        background: rgba(230, 57, 70, 0.2);
+        color: var(--warning-color);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(255, 214, 10, 0.3);
+    }
+
+    .hero-main-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        line-height: 1.2;
+    }
+
+    .hero-main-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 2rem;
+        line-height: 1.8;
+        max-width: 500px;
+    }
+
+    /* Transparent Search Form */
+    .search-overlay {
+        position: relative;
+        z-index: 2;
+    }
+
+    .search-form-transparent {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 2.5rem;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .search-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .search-title {
+        color: white;
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .search-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+
+    .form-label-transparent {
+        font-weight: 600;
+        color: white;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+    }
+
+    .search-input-wrapper-transparent {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-input-transparent {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        padding: 0.75rem 1rem 0.75rem 3rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        backdrop-filter: blur(10px);
+    }
+
+    .search-input-transparent::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .search-input-transparent:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.2);
+        outline: none;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .input-icon-transparent {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.8);
+        z-index: 5;
+    }
+
+    .btn-search-transparent {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #c62e3a 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        width: 100%;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .btn-search-transparent:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(230, 57, 70, 0.4);
+        background: linear-gradient(135deg, #c62e3a 0%, var(--primary-color) 100%);
+    }
+
+    /* Quick Stats */
+    .quick-stats-transparent {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-item-transparent {
+        text-align: center;
+    }
+
+    .stat-number-transparent {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--warning-color);
+        display: block;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .stat-label-transparent {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+    }
+
+    /* Autocomplete Suggestions */
+    .autocomplete-suggestions-transparent {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(15px);
+        border: 2px solid var(--primary-color);
+        border-radius: 12px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        margin-top: 0.25rem;
+        width: 100%;
+    }
+
+    .autocomplete-suggestion-transparent {
+        padding: 1rem 1.5rem;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .autocomplete-suggestion-transparent:hover {
+        background: rgba(230, 57, 70, 0.1);
+        padding-left: 1.75rem;
+    }
+
+    .autocomplete-suggestion-transparent:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-icon-transparent {
+        color: var(--primary-color);
+        font-size: 1.2rem;
+    }
+
+    .suggestion-content-transparent {
+        flex: 1;
+    }
+
+    .suggestion-name-transparent {
+        font-weight: 600;
+        color: var(--secondary-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .suggestion-county-transparent {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    /* About Us Section */
+    .about-section {
+        padding: 5rem 0;
+        background: white;
+    }
+
+    .about-content {
+        max-width: 600px;
+    }
+
+    .section-badge {
+        display: inline-block;
+        background: rgba(230, 57, 70, 0.1);
+        color: var(--primary-color);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .about-heading {
+        color: var(--secondary-color);
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        line-height: 1.3;
+    }
+
+    .about-text {
+        color: #6c757d;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        margin-bottom: 1.5rem;
+    }
+
+    .about-features {
+        list-style: none;
+        padding: 0;
+        margin: 2rem 0;
+    }
+
+    .about-features li {
+        padding: 0.75rem 0;
+        color: var(--secondary-color);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .about-features li i {
+        color: var(--success-color);
+        font-size: 1.25rem;
+    }
+
+    .about-image-wrapper {
+        position: relative;
+    }
+
+    .about-image {
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+    }
+
+    .about-image-badge {
+        position: absolute;
+        bottom: 2rem;
+        right: 2rem;
+        background: white;
+        padding: 1.5rem 2rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        text-align: center;
+    }
+
+    .badge-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        display: block;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .badge-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
+    /* Features Section */
+    .features-section {
+        padding: 5rem 0;
+        background: var(--accent-color);
+    }
+
+    .section-heading {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .section-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+        margin-bottom: 1rem;
+    }
+
+    .section-description {
+        font-size: 1.1rem;
+        color: #6c757d;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .feature-card {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 16px;
+        padding: 2.5rem;
+        text-align: center;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        border-color: var(--primary-color);
+    }
+
+    .feature-icon {
+        font-size: 3.5rem;
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .feature-title {
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: var(--secondary-color);
+        font-size: 1.25rem;
+    }
+
+    .feature-description {
+        color: #6c757d;
+        line-height: 1.6;
+    }
+
+    /* Download App Section */
+    .download-section {
+        padding: 5rem 0;
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #152841 100%);
+        color: white;
+    }
+
+    .download-heading {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .download-text {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 2rem;
+        line-height: 1.8;
+    }
+
+    .google-play-btn {
+        background: white;
+        color: var(--secondary-color);
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .google-play-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(255,255,255,0.3);
+        color: var(--secondary-color);
+    }
+
+    .google-play-btn i {
+        font-size: 1.5rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 992px) {
+        .hero-section {
+            min-height: auto;
+            padding: 5rem 0 3rem;
+        }
+
+        .hero-text {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero-main-title {
+            font-size: 2.75rem;
+        }
+
+        .hero-main-subtitle {
+            font-size: 1.1rem;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-badge {
+            margin: 0 auto 1.5rem;
+        }
+
+        .search-form-transparent {
+            padding: 2rem;
+        }
+
+        .about-heading {
+            font-size: 2rem;
+        }
+
+        .about-image {
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hero-main-title {
+            font-size: 2.25rem;
+        }
+
+        .hero-main-subtitle {
+            font-size: 1rem;
+        }
+
+        .search-form-transparent {
+            padding: 1.5rem;
+        }
+
+        .search-title {
+            font-size: 1.5rem;
+        }
+
+        .quick-stats-transparent {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .about-heading {
+            font-size: 1.75rem;
+        }
+
+        .about-image {
+            height: 350px;
+        }
+
+        .feature-card {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+        }
+
+        .download-heading {
+            font-size: 1.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .hero-main-title {
+            font-size: 1.875rem;
+        }
+
+        .search-title {
+            font-size: 1.25rem;
+        }
+
+        .btn-search-transparent {
+            padding: 0.875rem 1.5rem;
+        }
+
+        .about-image {
+            height: 300px;
+        }
+
+        .about-image-badge {
+            bottom: 1rem;
+            right: 1rem;
+            padding: 1rem 1.5rem;
+        }
+
+        .badge-number {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block search_bar %}
-<!-- Search Bar Section -->
-<section class="search-bar">
+<!-- Hero Section with Transparent Search -->
+<section class="hero-section">
+    <div class="hero-pattern"></div>
+    
     <div class="container">
-        <form class="search-form" id="searchForm">
-            <input type="text" 
-                   class="search-input" 
-                   id="fromLocation" 
-                   placeholder="From"
-                   autocomplete="off"
-                   required>
-            <input type="hidden" id="fromLocationId">
-            <div id="fromSuggestions" class="autocomplete-suggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 300px; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-top: 50px;"></div>
-            
-            <input type="text" 
-                   class="search-input" 
-                   id="toLocation" 
-                   placeholder="To"
-                   autocomplete="off"
-                   required>
-            <input type="hidden" id="toLocationId">
-            <div id="toSuggestions" class="autocomplete-suggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 300px; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-top: 50px;"></div>
-            
-            <input type="date" 
-                   class="search-input" 
-                   id="travelDate"
-                   required>
-            
-            <input type="date" 
-                   class="search-input" 
-                   id="returnDate"
-                   placeholder="Return Date">
-            
-            <button type="submit" class="btn-search">
-                <i class="bi bi-search"></i> Search
-            </button>
-        </form>
+        <div class="hero-content-main">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="hero-text">
+                        <span class="hero-badge">
+                            <i class="bi bi-star-fill me-2"></i>Kenya's Premier Bus Service
+                        </span>
+                        <h1 class="hero-main-title">Travel Smart, Travel Comfortable</h1>
+                        <p class="hero-main-subtitle">Experience the best of Kenyan bus travel with modern buses, professional drivers, and unmatched comfort on every journey.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="search-overlay">
+                        <div class="search-form-transparent">
+                            <div class="search-header">
+                                <h3 class="search-title">Book Your Journey</h3>
+                                <p class="search-subtitle">Safe, comfortable, and reliable bus travel</p>
+                            </div>
+                            
+                            <form id="searchForm">
+                                <div class="search-input-wrapper-transparent">
+                                    <label class="form-label-transparent">From</label>
+                                    <input type="text" 
+                                           class="search-input-transparent form-control" 
+                                           id="fromLocation" 
+                                           placeholder="Departure city"
+                                           autocomplete="off"
+                                           required>
+                                    <i class="bi bi-geo-alt input-icon-transparent"></i>
+                                    <input type="hidden" id="fromLocationId">
+                                    <div id="fromSuggestions" class="autocomplete-suggestions-transparent" style="display: none;"></div>
+                                </div>
+                                
+                                <div class="search-input-wrapper-transparent">
+                                    <label class="form-label-transparent">To</label>
+                                    <input type="text" 
+                                           class="search-input-transparent form-control" 
+                                           id="toLocation" 
+                                           placeholder="Destination city"
+                                           autocomplete="off"
+                                           required>
+                                    <i class="bi bi-geo-alt-fill input-icon-transparent"></i>
+                                    <input type="hidden" id="toLocationId">
+                                    <div id="toSuggestions" class="autocomplete-suggestions-transparent" style="display: none;"></div>
+                                </div>
+                                
+                                <div class="search-input-wrapper-transparent">
+                                    <label class="form-label-transparent">Departure Date</label>
+                                    <input type="date" 
+                                           class="search-input-transparent form-control" 
+                                           id="travelDate"
+                                           required>
+                                    <i class="bi bi-calendar3 input-icon-transparent"></i>
+                                </div>
+                                
+                                <div class="search-input-wrapper-transparent">
+                                    <label class="form-label-transparent">Return Date (Optional)</label>
+                                    <input type="date" 
+                                           class="search-input-transparent form-control" 
+                                           id="returnDate"
+                                           placeholder="Return date">
+                                    <i class="bi bi-arrow-left-right input-icon-transparent"></i>
+                                </div>
+                                
+                                <button type="submit" class="btn-search-transparent">
+                                    <i class="bi bi-search me-2"></i> Search Buses
+                                </button>
+                            </form>
+
+                            <!-- Quick Stats -->
+                            <div class="quick-stats-transparent">
+                                <div class="stat-item-transparent">
+                                    <span class="stat-number-transparent">50K+</span>
+                                    <span class="stat-label-transparent">Travelers</span>
+                                </div>
+                                <div class="stat-item-transparent">
+                                    <span class="stat-number-transparent">100+</span>
+                                    <span class="stat-label-transparent">Destinations</span>
+                                </div>
+                                <div class="stat-item-transparent">
+                                    <span class="stat-number-transparent">24/7</span>
+                                    <span class="stat-label-transparent">Support</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
 
 {% block content %}
-<!-- Hero Carousel Section -->
-<section class="py-0">
-    <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
+<!-- About Us Section -->
+<section class="about-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <div class="about-content">
+                    <span class="section-badge">About DreamLine</span>
+                    <h2 class="about-heading">Redefining Bus Travel Across Kenya</h2>
+                    <p class="about-text">For over a decade, we've been setting the standard for comfortable, safe, and reliable bus transportation. Our commitment to excellence has made us the trusted choice for thousands of travelers.</p>
+                    <p class="about-text">We pride ourselves on maintaining the most modern fleet of buses on Kenyan roads, equipped with spacious seating, ample legroom, and top-tier amenities to ensure you arrive at your destination relaxed and refreshed.</p>
+                    
+                    <ul class="about-features">
+                        <li>
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>10+ years of trusted service</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Modern, well-maintained fleet</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Professional, experienced drivers</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Nationwide coverage and connectivity</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="about-image-wrapper">
+                    <img src="{% static 'images/bus-1.png' %}" alt="DreamLine Bus" class="about-image">
+                    <div class="about-image-badge">
+                        <span class="badge-number">50K+</span>
+                        <span class="badge-text">Happy Travelers</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <div style="height: 400px; background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 400%22%3E%3Crect fill=%22%2334495e%22 width=%221200%22 height=%22400%22/%3E%3Ctext x=%22600%22 y=%22200%22 font-size=%2248%22 fill=%22white%22 text-anchor=%22middle%22%3EDreamLine Buses%3C/text%3E%3C/svg%3E'); background-size: cover; background-position: center;">
-                </div>
-            </div>
-            <div class="carousel-item">
-                <div style="height: 400px; background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 400%22%3E%3Crect fill=%22%232c3e50%22 width=%221200%22 height=%22400%22/%3E%3Ctext x=%22600%22 y=%22200%22 font-size=%2248%22 fill=%22white%22 text-anchor=%22middle%22%3EComfortable Travel%3C/text%3E%3C/svg%3E'); background-size: cover; background-position: center;">
-                </div>
-            </div>
-            <div class="carousel-item">
-                <div style="height: 400px; background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 400%22%3E%3Crect fill=%22%231a252f%22 width=%221200%22 height=%22400%22/%3E%3Ctext x=%22600%22 y=%22200%22 font-size=%2248%22 fill=%22white%22 text-anchor=%22middle%22%3ESafe Journey%3C/text%3E%3C/svg%3E'); background-size: cover; background-position: center;">
-                </div>
-            </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
-        </button>
     </div>
 </section>
 
 <!-- Features Section -->
-<section class="py-5 bg-light">
+<section class="features-section">
     <div class="container">
-        <div class="row g-4 text-center">
-            <div class="col-md-3 col-6">
-                <div class="p-4">
-                    <div class="mb-3">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23ffebee'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle'%3E👑%3C/text%3E%3C/svg%3E" alt="VIP Treatment" style="width: 80px; height: 80px;">
-                    </div>
-                    <h6>VIP Treatment</h6>
+        <div class="section-heading">
+            <h2 class="section-title">Why Choose DreamLine</h2>
+            <p class="section-description">Experience the difference with our premium services designed for your comfort and convenience</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-card">
+                    <i class="bi bi-shield-check feature-icon"></i>
+                    <h5 class="feature-title">Safe & Secure</h5>
+                    <p class="feature-description">Certified drivers and regular vehicle maintenance for your safety</p>
                 </div>
             </div>
-            <div class="col-md-3 col-6">
-                <div class="p-4">
-                    <div class="mb-3">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23e3f2fd'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle'%3E📶%3C/text%3E%3C/svg%3E" alt="WiFi" style="width: 80px; height: 80px;">
-                    </div>
-                    <h6>Onboard WiFi Available</h6>
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-card">
+                    <i class="bi bi-wifi feature-icon"></i>
+                    <h5 class="feature-title">Free WiFi</h5>
+                    <p class="feature-description">Stay connected with complimentary high-speed internet on all our buses</p>
                 </div>
             </div>
-            <div class="col-md-3 col-6">
-                <div class="p-4">
-                    <div class="mb-3">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23fff3e0'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle'%3E🔌%3C/text%3E%3C/svg%3E" alt="Power" style="width: 80px; height: 80px;">
-                    </div>
-                    <h6>Power Outlets</h6>
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-card">
+                    <i class="bi bi-plug feature-icon"></i>
+                    <h5 class="feature-title">Power Outlets</h5>
+                    <p class="feature-description">Charge your devices on the go with available power outlets</p>
                 </div>
             </div>
-            <div class="col-md-3 col-6">
-                <div class="p-4">
-                    <div class="mb-3">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23fce4ec'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle'%3E🪑%3C/text%3E%3C/svg%3E" alt="Legroom" style="width: 80px; height: 80px;">
-                    </div>
-                    <h6>Extra Legroom</h6>
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-card">
+                    <i class="bi bi-headset feature-icon"></i>
+                    <h5 class="feature-title">24/7 Support</h5>
+                    <p class="feature-description">Round-the-clock customer service to assist you anytime</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Mobile App Section -->
-<section class="py-5">
+<!-- Download App Section -->
+<section class="download-section">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-md-6 mb-4 mb-md-0">
-                <div class="bg-dark text-white p-5 rounded">
-                    <h2 class="mb-3">Download our app on the playstore</h2>
-                    <a href="#" class="btn btn-light">
-                        <i class="bi bi-google-play me-2"></i>
-                        GET IT ON<br>
-                        <strong>Google Play</strong>
-                    </a>
-                </div>
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="download-heading">Download the Modern app to book on the go</h2>
+                <p class="download-text">Book tickets easily, track your bus in real-time, and enjoy exclusive mobile-only discounts. Available now on Google Play Store.</p>
+                <a href="#" class="google-play-btn">
+                    <i class="bi bi-google-play"></i>
+                    <div>
+                        <div style="font-size: 0.75rem; font-weight: 400;">GET IT ON</div>
+                        <div style="font-size: 1.1rem; font-weight: 700;">Google Play</div>
+                    </div>
+                </a>
             </div>
-            <div class="col-md-6">
-                <div class="bg-warning p-5 rounded text-center" style="background: linear-gradient(135deg, #ffd60a 0%, #ffb700 100%) !important;">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 50'%3E%3Ctext x='5' y='30' font-family='Arial Black' font-size='24' font-weight='bold' fill='%23333'%3EDREAM%3C/text%3E%3Ctext x='5' y='42' font-family='Arial' font-size='10' fill='%23333'%3EONLINE TRAVELS%3C/text%3E%3C/svg%3E" alt="DreamLine" class="mb-3" style="height: 50px;">
-                    <h3 class="mb-3">TRAVEL TO NAIROBI</h3>
-                    <h4 class="mb-3">0716000100 / 0702444422</h4>
-                    <p class="mb-3">www.dreamline.co.ke</p>
-                    <a href="#" class="btn btn-danger btn-lg">BOOK YOUR TICKET</a>
-                </div>
+            <div class="col-lg-6 text-center">
+                <img src="{% static 'images/app-mockup.png' %}" alt="Mobile App" class="img-fluid" style="max-height: 400px;">
             </div>
         </div>
     </div>
 </section>
-
-<!-- Save & Earn Section -->
-<section class="py-5 bg-light">
-    <div class="container">
-        <div class="row text-center">
-            <div class="col-md-6 mb-4 mb-md-0">
-                <div class="p-4">
-                    <div class="mb-3">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='65' font-size='60' text-anchor='middle'%3E🐷%3C/text%3E%3C/svg%3E" alt="Save" style="width: 80px; height: 80px;">
-                    </div>
-                    <h4 class="mb-3">Save</h4>
-                    <p class="text-muted">Pay less when using our new Mobile App. You can save up to 25% of your Promo Cash balance in a single purchase.</p>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="p-4">
-                    <div class="mb-3">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='65' font-size='60' text-anchor='middle'%3E🪙%3C/text%3E%3C/svg%3E" alt="Earn" style="width: 80px; height: 80px;">
-                    </div>
-                    <h4 class="mb-3">Earn Credits</h4>
-                    <p class="text-muted">Receive more credit during promotional periods which will be added into your Promo Cash account.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<style>
-.autocomplete-suggestion {
-    padding: 10px 15px;
-    cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.autocomplete-suggestion:hover {
-    background-color: #f8f9fa;
-}
-
-.autocomplete-suggestion:last-child {
-    border-bottom: none;
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -213,9 +805,12 @@ $(document).ready(function() {
                     let html = '';
                     data.results.forEach(location => {
                         html += `
-                            <div class="autocomplete-suggestion" data-id="${location.id}" data-name="${location.name}">
-                                <i class="bi bi-geo-alt"></i> <strong>${location.name}</strong>
-                                <br><small class="text-muted">${location.county}</small>
+                            <div class="autocomplete-suggestion-transparent" data-id="${location.id}" data-name="${location.name}">
+                                <i class="bi bi-geo-alt suggestion-icon-transparent"></i>
+                                <div class="suggestion-content-transparent">
+                                    <div class="suggestion-name-transparent">${location.name}</div>
+                                    <div class="suggestion-county-transparent">${location.county}</div>
+                                </div>
                             </div>
                         `;
                     });
@@ -244,9 +839,12 @@ $(document).ready(function() {
                     let html = '';
                     data.results.forEach(location => {
                         html += `
-                            <div class="autocomplete-suggestion" data-id="${location.id}" data-name="${location.name}">
-                                <i class="bi bi-geo-alt"></i> <strong>${location.name}</strong>
-                                <br><small class="text-muted">${location.county}</small>
+                            <div class="autocomplete-suggestion-transparent" data-id="${location.id}" data-name="${location.name}">
+                                <i class="bi bi-geo-alt-fill suggestion-icon-transparent"></i>
+                                <div class="suggestion-content-transparent">
+                                    <div class="suggestion-name-transparent">${location.name}</div>
+                                    <div class="suggestion-county-transparent">${location.county}</div>
+                                </div>
                             </div>
                         `;
                     });
@@ -259,7 +857,7 @@ $(document).ready(function() {
     });
     
     // Select suggestion for From
-    $(document).on('click', '#fromSuggestions .autocomplete-suggestion', function() {
+    $(document).on('click', '#fromSuggestions .autocomplete-suggestion-transparent', function() {
         const id = $(this).data('id');
         const name = $(this).data('name');
         $('#fromLocation').val(name);
@@ -269,7 +867,7 @@ $(document).ready(function() {
     });
     
     // Select suggestion for To
-    $(document).on('click', '#toSuggestions .autocomplete-suggestion', function() {
+    $(document).on('click', '#toSuggestions .autocomplete-suggestion-transparent', function() {
         const id = $(this).data('id');
         const name = $(this).data('name');
         $('#toLocation').val(name);
@@ -281,11 +879,11 @@ $(document).ready(function() {
     // Hide suggestions when clicking outside
     $(document).click(function(e) {
         if (!$(e.target).closest('#fromLocation, #fromSuggestions, #toLocation, #toSuggestions').length) {
-            $('.autocomplete-suggestions').hide();
+            $('.autocomplete-suggestions-transparent').hide();
         }
     });
     
-    // Form submission
+       // Form submission
     $('#searchForm').submit(function(e) {
         e.preventDefault();
         
@@ -294,12 +892,12 @@ $(document).ready(function() {
         const date = $('#travelDate').val();
         
         if (!fromId || !toId) {
-            showAlert('Please select both origin and destination from the suggestions', 'warning');
+            alert('Please select both origin and destination from the suggestions');
             return;
         }
         
         if (fromId === toId) {
-            showAlert('Origin and destination cannot be the same', 'warning');
+            alert('Origin and destination cannot be the same');
             return;
         }
         
