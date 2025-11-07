@@ -2143,3 +2143,333 @@ def cancel_booking(request, booking_id):
         return redirect('booking_detail', booking_id=booking.id)
     
     return redirect('booking_detail', booking_id=booking.id)
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.db.models import Q, Count, Prefetch
+from django.utils import timezone
+from .models import Route, Location, BoardingPoint, RouteStop, Trip
+
+
+# ============================================
+# ROUTES VIEWS
+# ============================================
+
+def route_list(request):
+    """Display all routes with filtering"""
+    routes = Route.objects.select_related(
+        'origin', 'destination'
+    ).annotate(
+        trips_count=Count('trips'),
+        stops_count=Count('stops')
+    ).filter(is_active=True)
+    
+    # Search filter
+    search = request.GET.get('search', '')
+    if search:
+        routes = routes.filter(
+            Q(origin__name__icontains=search) |
+            Q(destination__name__icontains=search)
+        )
+    
+    # Origin filter
+    origin_id = request.GET.get('origin', '')
+    if origin_id:
+        routes = routes.filter(origin_id=origin_id)
+    
+    # Destination filter
+    destination_id = request.GET.get('destination', '')
+    if destination_id:
+        routes = routes.filter(destination_id=destination_id)
+    
+    # Get all active locations for filters
+    locations = Location.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'routes': routes.order_by('origin__name', 'destination__name'),
+        'locations': locations,
+        'search': search,
+        'selected_origin': origin_id,
+        'selected_destination': destination_id,
+    }
+    
+    return render(request, 'admin/routes/route_list.html', context)
+
+
+def route_detail(request, pk):
+    """Display detailed route information including boarding points and stops"""
+    route = get_object_or_404(
+        Route.objects.select_related('origin', 'destination'),
+        pk=pk
+    )
+    
+    # Get route stops with boarding points
+    route_stops = RouteStop.objects.filter(route=route).select_related(
+        'boarding_point', 'boarding_point__location'
+    ).order_by('stop_order')
+    
+    # Get upcoming trips for this route
+    upcoming_trips = Trip.objects.filter(
+        route=route,
+        departure_date__gte=timezone.now().date(),
+        is_active=True
+    ).select_related('bus', 'bus__operator').order_by(
+        'departure_date', 'departure_time'
+    )[:5]
+    
+    # Calculate statistics
+    total_trips = Trip.objects.filter(route=route).count()
+    active_trips = upcoming_trips.count()
+    
+    # Separate pickup and dropoff points
+    pickup_points = route_stops.filter(is_pickup=True)
+    dropoff_points = route_stops.filter(is_dropoff=True)
+    
+    context = {
+        'route': route,
+        'route_stops': route_stops,
+        'pickup_points': pickup_points,
+        'dropoff_points': dropoff_points,
+        'upcoming_trips': upcoming_trips,
+        'total_trips': total_trips,
+        'active_trips': active_trips,
+    }
+    
+    return render(request, 'admin/routes/route_detail.html', context)
+
+
+# ============================================
+# LOCATIONS VIEWS
+# ============================================
+
+def location_list(request):
+    """Display all locations"""
+    locations = Location.objects.annotate(
+        boarding_points_count=Count('boarding_points'),
+        routes_from_count=Count('routes_from', filter=Q(routes_from__is_active=True)),
+        routes_to_count=Count('routes_to', filter=Q(routes_to__is_active=True))
+    ).filter(is_active=True)
+    
+    # Search filter
+    search = request.GET.get('search', '')
+    if search:
+        locations = locations.filter(
+            Q(name__icontains=search) |
+            Q(county__icontains=search)
+        )
+    
+    # County filter
+    county = request.GET.get('county', '')
+    if county:
+        locations = locations.filter(county=county)
+    
+    # Get unique counties for filter
+    counties = Location.objects.filter(
+        is_active=True
+    ).values_list('county', flat=True).distinct().order_by('county')
+    
+    context = {
+        'locations': locations.order_by('name'),
+        'counties': counties,
+        'search': search,
+        'selected_county': county,
+    }
+    
+    return render(request, 'admin/locations/location_list.html', context)
+
+
+def location_detail(request, pk):
+    """Display detailed location information"""
+    location = get_object_or_404(Location, pk=pk)
+    
+    # Get boarding points for this location
+    boarding_points = BoardingPoint.objects.filter(
+        location=location,
+        is_active=True
+    ).order_by('name')
+    
+    # Get routes from this location
+    routes_from = Route.objects.filter(
+        origin=location,
+        is_active=True
+    ).select_related('destination').annotate(
+        trips_count=Count('trips')
+    )
+    
+    # Get routes to this location
+    routes_to = Route.objects.filter(
+        destination=location,
+        is_active=True
+    ).select_related('origin').annotate(
+        trips_count=Count('trips')
+    )
+    
+    context = {
+        'location': location,
+        'boarding_points': boarding_points,
+        'routes_from': routes_from,
+        'routes_to': routes_to,
+    }
+    
+    return render(request, 'admin/locations/location_detail.html', context)
+
+
+# ============================================
+# BOARDING POINTS VIEWS
+# ============================================
+
+def boarding_point_list(request):
+    """Display all boarding points"""
+    boarding_points = BoardingPoint.objects.select_related(
+        'location'
+    ).filter(is_active=True)
+    
+    # Search filter
+    search = request.GET.get('search', '')
+    if search:
+        boarding_points = boarding_points.filter(
+            Q(name__icontains=search) |
+            Q(location__name__icontains=search) |
+            Q(address__icontains=search) |
+            Q(landmark__icontains=search)
+        )
+    
+    # Location filter
+    location_id = request.GET.get('location', '')
+    if location_id:
+        boarding_points = boarding_points.filter(location_id=location_id)
+    
+    # Get all locations for filter
+    locations = Location.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'boarding_points': boarding_points.order_by('location__name', 'name'),
+        'locations': locations,
+        'search': search,
+        'selected_location': location_id,
+    }
+    
+    return render(request, 'admin/boarding_points/boarding_point_list.html', context)
+
+
+def boarding_point_detail(request, pk):
+    """Display detailed boarding point information"""
+    boarding_point = get_object_or_404(
+        BoardingPoint.objects.select_related('location'),
+        pk=pk
+    )
+    
+    # Get routes that include this boarding point
+    route_stops = RouteStop.objects.filter(
+        boarding_point=boarding_point
+    ).select_related(
+        'route', 'route__origin', 'route__destination'
+    ).order_by('route__origin__name')
+    
+    # Separate pickup and dropoff routes
+    pickup_routes = route_stops.filter(is_pickup=True)
+    dropoff_routes = route_stops.filter(is_dropoff=True)
+    
+    # Get upcoming trips passing through this point
+    upcoming_trips = Trip.objects.filter(
+        route__stops__boarding_point=boarding_point,
+        departure_date__gte=timezone.now().date(),
+        is_active=True
+    ).select_related(
+        'bus', 'route', 'route__origin', 'route__destination'
+    ).distinct().order_by('departure_date', 'departure_time')[:10]
+    
+    context = {
+        'boarding_point': boarding_point,
+        'route_stops': route_stops,
+        'pickup_routes': pickup_routes,
+        'dropoff_routes': dropoff_routes,
+        'upcoming_trips': upcoming_trips,
+    }
+    
+    return render(request, 'admin/boarding_points/boarding_point_detail.html', context)
+
+
+# ============================================
+# ROUTE STOPS VIEWS
+# ============================================
+
+def route_stop_list(request):
+    """Display all route stops"""
+    route_stops = RouteStop.objects.select_related(
+        'route', 'route__origin', 'route__destination',
+        'boarding_point', 'boarding_point__location'
+    ).order_by('route__origin__name', 'stop_order')
+    
+    # Route filter
+    route_id = request.GET.get('route', '')
+    if route_id:
+        route_stops = route_stops.filter(route_id=route_id)
+    
+    # Location filter
+    location_id = request.GET.get('location', '')
+    if location_id:
+        route_stops = route_stops.filter(boarding_point__location_id=location_id)
+    
+    # Stop type filter
+    stop_type = request.GET.get('stop_type', '')
+    if stop_type == 'pickup':
+        route_stops = route_stops.filter(is_pickup=True)
+    elif stop_type == 'dropoff':
+        route_stops = route_stops.filter(is_dropoff=True)
+    
+    # Get all routes and locations for filters
+    routes = Route.objects.filter(is_active=True).select_related(
+        'origin', 'destination'
+    ).order_by('origin__name')
+    locations = Location.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'route_stops': route_stops,
+        'routes': routes,
+        'locations': locations,
+        'selected_route': route_id,
+        'selected_location': location_id,
+        'selected_stop_type': stop_type,
+    }
+    
+    return render(request, 'admin/route_stops/route_stop_list.html', context)
+
+
+def route_stop_detail(request, pk):
+    """Display detailed route stop information"""
+    route_stop = get_object_or_404(
+        RouteStop.objects.select_related(
+            'route', 'route__origin', 'route__destination',
+            'boarding_point', 'boarding_point__location'
+        ),
+        pk=pk
+    )
+    
+    # Get other stops on the same route
+    other_stops = RouteStop.objects.filter(
+        route=route_stop.route
+    ).exclude(pk=pk).select_related(
+        'boarding_point', 'boarding_point__location'
+    ).order_by('stop_order')
+    
+    # Previous and next stops
+    previous_stop = RouteStop.objects.filter(
+        route=route_stop.route,
+        stop_order__lt=route_stop.stop_order
+    ).order_by('-stop_order').first()
+    
+    next_stop = RouteStop.objects.filter(
+        route=route_stop.route,
+        stop_order__gt=route_stop.stop_order
+    ).order_by('stop_order').first()
+    
+    context = {
+        'route_stop': route_stop,
+        'other_stops': other_stops,
+        'previous_stop': previous_stop,
+        'next_stop': next_stop,
+    }
+    
+    return render(request, 'admin/route_stops/route_stop_detail.html', context)

@@ -66,5 +66,21 @@ urlpatterns = [
     # Payment Management
     path('admin-payments/', views.payment_list, name='payment_list'),
     path('admin-payments/export/', views.export_payments, name='export_payments'),
+
+    # Routes
+    path('routes/', views.route_list, name='route_list'),
+    path('routes/<int:pk>/', views.route_detail, name='route_detail'),
+    
+    # Locations
+    path('locations/', views.location_list, name='location_list'),
+    path('locations/<int:pk>/', views.location_detail, name='location_detail'),
+    
+    # Boarding Points
+    path('boarding-points/', views.boarding_point_list, name='boarding_point_list'),
+    path('boarding-points/<int:pk>/', views.boarding_point_detail, name='boarding_point_detail'),
+    
+    # Route Stops
+    path('route-stops/', views.route_stop_list, name='route_stop_list'),
+    path('route-stops/<int:pk>/', views.route_stop_detail, name='route_stop_detail'),
     
 ]
