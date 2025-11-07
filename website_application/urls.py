@@ -15,4 +15,8 @@ urlpatterns = [
     path('api/seats/unlock/', views.api_unlock_seat, name='api_unlock_seat'),
     path('api/calculate-total/', views.api_calculate_total, name='api_calculate_total'),
     path('api/create-booking/', views.api_create_booking, name='api_create_booking'),
+
+    #admin views
+    path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    
 ]

@@ -508,3 +508,308 @@ def api_create_booking(request):
             'error': 'An unexpected error occurred',
             'details': str(e)
         }, status=500)
+
+
+
+from django.shortcuts import render
+from django.db.models import Sum, Count, Q, Avg
+from django.utils import timezone
+from datetime import timedelta, datetime
+from decimal import Decimal
+from .models import (
+    Booking, Trip, Bus, Payment, Route, 
+    SeatBooking, BusOperator, Review
+)
+
+
+def admin_dashboard(request):
+    """
+    Admin dashboard view with statistics, charts data, and recent activity
+    """
+    today = timezone.now().date()
+    yesterday = today - timedelta(days=1)
+    last_30_days = today - timedelta(days=30)
+    last_7_days = today - timedelta(days=7)
+    
+    # ============== TODAY'S STATS ==============
+    
+    # Today's bookings count
+    today_bookings = Booking.objects.filter(
+        created_at__date=today
+    ).count()
+    
+    # Yesterday's bookings for comparison
+    yesterday_bookings = Booking.objects.filter(
+        created_at__date=yesterday
+    ).count()
+    
+    # Calculate percentage change
+    if yesterday_bookings > 0:
+        bookings_change = ((today_bookings - yesterday_bookings) / yesterday_bookings) * 100
+    else:
+        bookings_change = 100 if today_bookings > 0 else 0
+    
+    # Today's revenue
+    today_revenue = Payment.objects.filter(
+        created_at__date=today,
+        status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # Yesterday's revenue
+    yesterday_revenue = Payment.objects.filter(
+        created_at__date=yesterday,
+        status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # Revenue percentage change
+    if yesterday_revenue > 0:
+        revenue_change = ((today_revenue - yesterday_revenue) / yesterday_revenue) * 100
+    else:
+        revenue_change = 100 if today_revenue > 0 else 0
+    
+    # Active trips (scheduled or boarding today)
+    active_trips = Trip.objects.filter(
+        departure_date=today,
+        status__in=['scheduled', 'boarding']
+    ).count()
+    
+    # Cancelled trips today
+    cancelled_today = Trip.objects.filter(
+        departure_date=today,
+        status='cancelled'
+    ).count()
+    
+    # Pending payments
+    pending_payments = Booking.objects.filter(
+        status='pending'
+    ).count()
+    
+    # Pending payments yesterday
+    pending_yesterday = Booking.objects.filter(
+        status='pending',
+        created_at__date=yesterday
+    ).count()
+    
+    # ============== REVENUE CHART DATA (Last 30 Days) ==============
+    revenue_data = []
+    revenue_labels = []
+    
+    for i in range(29, -1, -1):
+        date = today - timedelta(days=i)
+        daily_revenue = Payment.objects.filter(
+            created_at__date=date,
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        revenue_data.append(float(daily_revenue))
+        revenue_labels.append(date.strftime('%b %d'))
+    
+    # ============== BOOKING STATUS PIE CHART ==============
+    booking_statuses = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).values('status').annotate(count=Count('id'))
+    
+    status_labels = []
+    status_data = []
+    status_colors = {
+        'confirmed': '#3498db',
+        'pending': '#f39c12',
+        'cancelled': '#e74c3c',
+        'completed': '#27ae60',
+        'paid': '#9b59b6'
+    }
+    
+    for status in booking_statuses:
+        status_labels.append(status['status'].title())
+        status_data.append(status['count'])
+    
+    # ============== TOP ROUTES BAR CHART ==============
+    top_routes = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).values(
+        'trip__route__origin__name',
+        'trip__route__destination__name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    route_labels = []
+    route_data = []
+    
+    for route in top_routes:
+        origin = route['trip__route__origin__name']
+        destination = route['trip__route__destination__name']
+        route_labels.append(f"{origin} - {destination}")
+        route_data.append(route['count'])
+    
+    # ============== PAYMENT METHODS DOUGHNUT CHART ==============
+    payment_methods = Payment.objects.filter(
+        created_at__gte=last_30_days,
+        status='completed'
+    ).values('payment_method').annotate(count=Count('id'))
+    
+    payment_labels = []
+    payment_data = []
+    payment_colors = {
+        'mpesa': '#27ae60',
+        'card': '#3498db',
+        'cash': '#95a5a6'
+    }
+    
+    for method in payment_methods:
+        payment_labels.append(method['payment_method'].upper())
+        payment_data.append(method['count'])
+    
+    # ============== OCCUPANCY RATE LINE CHART (Last 7 Days) ==============
+    occupancy_data = []
+    occupancy_labels = []
+    
+    for i in range(6, -1, -1):
+        date = today - timedelta(days=i)
+        
+        # Get all trips for this date
+        trips_on_date = Trip.objects.filter(
+            departure_date=date,
+            status__in=['departed', 'completed']
+        )
+        
+        total_seats = 0
+        booked_seats = 0
+        
+        for trip in trips_on_date:
+            total_seats += trip.bus.seat_layout.total_seats
+            booked = SeatBooking.objects.filter(
+                seat__trip=trip,
+                booking__status__in=['confirmed', 'paid', 'completed']
+            ).count()
+            booked_seats += booked
+        
+        # Calculate occupancy percentage
+        if total_seats > 0:
+            occupancy_rate = (booked_seats / total_seats) * 100
+        else:
+            occupancy_rate = 0
+        
+        occupancy_data.append(round(occupancy_rate, 1))
+        occupancy_labels.append(date.strftime('%a'))
+    
+    # ============== RECENT BOOKINGS ==============
+    recent_bookings = Booking.objects.select_related(
+        'trip__route__origin',
+        'trip__route__destination'
+    ).order_by('-created_at')[:5]
+    
+    bookings_list = []
+    for booking in recent_bookings:
+        bookings_list.append({
+            'reference': booking.booking_reference,
+            'customer_name': booking.customer_full_name,
+            'route': f"{booking.trip.route.origin.name} → {booking.trip.route.destination.name}",
+            'amount': booking.total_amount,
+            'status': booking.status,
+            'created_at': booking.created_at
+        })
+    
+    # ============== TODAY'S TRIPS ==============
+    todays_trips = Trip.objects.filter(
+        departure_date=today
+    ).select_related(
+        'bus',
+        'route__origin',
+        'route__destination'
+    ).order_by('departure_time')[:5]
+    
+    trips_list = []
+    for trip in todays_trips:
+        total_seats = trip.bus.seat_layout.total_seats
+        booked_seats = SeatBooking.objects.filter(
+            seat__trip=trip,
+            booking__status__in=['confirmed', 'paid', 'pending']
+        ).count()
+        
+        occupancy_percentage = (booked_seats / total_seats * 100) if total_seats > 0 else 0
+        
+        # Determine occupancy level
+        if occupancy_percentage >= 80:
+            occupancy_level = 'high'
+        elif occupancy_percentage >= 50:
+            occupancy_level = 'medium'
+        else:
+            occupancy_level = 'low'
+        
+        trips_list.append({
+            'time': trip.departure_time.strftime('%I:%M'),
+            'period': trip.departure_time.strftime('%p'),
+            'route': f"{trip.route.origin.name} → {trip.route.destination.name}",
+            'bus_name': trip.bus.bus_name,
+            'bus_type': trip.bus.get_bus_type_display(),
+            'booked_seats': booked_seats,
+            'total_seats': total_seats,
+            'occupancy_percentage': round(occupancy_percentage, 0),
+            'occupancy_level': occupancy_level,
+            'status': trip.status
+        })
+    
+    # ============== ADDITIONAL STATS ==============
+    
+    # Total buses
+    total_buses = Bus.objects.filter(is_active=True).count()
+    
+    # Total operators
+    total_operators = BusOperator.objects.filter(is_active=True).count()
+    
+    # Average rating
+    avg_rating = Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0
+    
+    # Total routes
+    total_routes = Route.objects.filter(is_active=True).count()
+    
+    context = {
+        # Stats
+        'today_bookings': today_bookings,
+        'bookings_change': round(bookings_change, 1),
+        'bookings_change_positive': bookings_change >= 0,
+        
+        'today_revenue': today_revenue,
+        'revenue_change': round(revenue_change, 1),
+        'revenue_change_positive': revenue_change >= 0,
+        
+        'active_trips': active_trips,
+        'cancelled_today': cancelled_today,
+        
+        'pending_payments': pending_payments,
+        'pending_change': pending_yesterday - pending_payments,
+        'pending_change_positive': (pending_yesterday - pending_payments) > 0,
+        
+        # Chart data - Revenue
+        'revenue_labels': revenue_labels,
+        'revenue_data': revenue_data,
+        
+        # Chart data - Booking Status
+        'status_labels': status_labels,
+        'status_data': status_data,
+        
+        # Chart data - Top Routes
+        'route_labels': route_labels,
+        'route_data': route_data,
+        
+        # Chart data - Payment Methods
+        'payment_labels': payment_labels,
+        'payment_data': payment_data,
+        
+        # Chart data - Occupancy
+        'occupancy_labels': occupancy_labels,
+        'occupancy_data': occupancy_data,
+        
+        # Recent data
+        'recent_bookings': bookings_list,
+        'todays_trips': trips_list,
+        
+        # Additional stats
+        'total_buses': total_buses,
+        'total_operators': total_operators,
+        'avg_rating': round(avg_rating, 2),
+        'total_routes': total_routes,
+    }
+    
+    return render(request, 'admin/dashboard.html', context)

@@ -75,8 +75,10 @@ class BusAdmin(admin.ModelAdmin):
     
     def rating_display(self, obj):
         stars = '⭐' * int(obj.rating)
-        return format_html('{} ({:.2f})', stars, obj.rating)
+        formatted_rating = f"{obj.rating:.2f}"
+        return format_html('{} ({})', stars, formatted_rating)
     rating_display.short_description = 'Rating'
+
 
 
 @admin.register(Location)
@@ -358,8 +360,9 @@ class BookingAdmin(admin.ModelAdmin):
     seats_booked.short_description = 'Seats'
     
     def total_amount_display(self, obj):
-        return format_html('<strong>KES {:,.2f}</strong>', obj.total_amount)
-    total_amount_display.short_description = 'Amount'
+        formatted_amount = f"{obj.total_amount:,.2f}"
+        return format_html('<strong>KES {}</strong>', formatted_amount)
+
     
     def status_badge(self, obj):
         colors = {
