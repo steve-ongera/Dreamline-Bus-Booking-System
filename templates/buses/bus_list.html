@@ -5,27 +5,62 @@
 
 {% block extra_css %}
 <style>
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Bus card styling */
     .bus-card {
         transition: transform 0.2s, box-shadow 0.2s;
-        border: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        border-radius: 8px;
+        overflow: hidden;
     }
     
     .bus-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.08);
     }
     
     .bus-type-badge {
         font-size: 0.75rem;
         padding: 0.25rem 0.75rem;
-        border-radius: 20px;
+        border-radius: 4px;
+        font-weight: 500;
     }
     
     .status-badge {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 12px;
+        right: 12px;
+        z-index: 1;
     }
     
     .rating-stars {
@@ -33,8 +68,9 @@
     }
     
     .amenity-icon {
-        font-size: 1.2rem;
-        margin: 0 0.25rem;
+        font-size: 1.1rem;
+        margin: 0 0.15rem;
+        color: #6c757d;
     }
     
     .filter-section {
@@ -42,31 +78,103 @@
         padding: 1.5rem;
         border-radius: 8px;
         margin-bottom: 2rem;
+        border: 1px solid #e9ecef;
     }
     
     .bus-image {
-        height: 200px;
+        height: 180px;
         object-fit: cover;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .operator-logo {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         object-fit: contain;
         border-radius: 4px;
         background: white;
         padding: 4px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #343a40;
+        margin: 0;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px dashed #dee2e6;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .bus-image {
+            height: 150px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-bus-front"></i> All Buses</h2>
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="#">Fleet Management</a></li>
+                <li class="breadcrumb-item active" aria-current="page">All Buses</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="bi bi-bus-front text-primary"></i>
+            Bus Fleet Management
+        </h1>
         <a href="{% url 'bus_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Add New Bus
+            <i class="bi bi-plus-circle me-1"></i> Add New Bus
         </a>
     </div>
 
@@ -75,13 +183,16 @@
         <form method="get" id="filterForm">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" 
-                           placeholder="Bus name or registration..." 
-                           value="{{ search }}">
+                    <label class="form-label fw-medium">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Bus name or registration..." 
+                               value="{{ search }}">
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Operator</label>
+                    <label class="form-label fw-medium">Operator</label>
                     <select name="operator" class="form-select">
                         <option value="">All Operators</option>
                         {% for operator in operators %}
@@ -92,7 +203,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Bus Type</label>
+                    <label class="form-label fw-medium">Bus Type</label>
                     <select name="type" class="form-select">
                         <option value="">All Types</option>
                         {% for value, label in bus_types %}
@@ -103,16 +214,16 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Status</label>
+                    <label class="form-label fw-medium">Status</label>
                     <select name="status" class="form-select">
-                        <option value="">All</option>
+                        <option value="">All Status</option>
                         <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
                         <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Inactive</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i> Filter
+                        <i class="bi bi-funnel me-1"></i> Apply Filters
                     </button>
                 </div>
             </div>
@@ -126,15 +237,15 @@
         <div class="col-md-6 col-lg-4">
             <div class="card bus-card h-100">
                 {% if bus.is_active %}
-                <span class="badge bg-success status-badge">Active</span>
+                <span class="badge bg-success status-badge"><i class="bi bi-check-circle me-1"></i> Active</span>
                 {% else %}
-                <span class="badge bg-secondary status-badge">Inactive</span>
+                <span class="badge bg-secondary status-badge"><i class="bi bi-pause-circle me-1"></i> Inactive</span>
                 {% endif %}
                 
-                <div class="bus-image card-img-top d-flex align-items-center justify-content-center text-white">
+                <div class="bus-image card-img-top text-white">
                     <div class="text-center">
-                        <i class="bi bi-bus-front" style="font-size: 4rem;"></i>
-                        <p class="mb-0 mt-2 fs-5">{{ bus.registration_number }}</p>
+                        <i class="bi bi-bus-front" style="font-size: 3.5rem;"></i>
+                        <p class="mb-0 mt-2 fw-medium">{{ bus.registration_number }}</p>
                     </div>
                 </div>
                 
@@ -149,12 +260,12 @@
                         </div>
                     </div>
                     
-                    <div class="mb-2">
+                    <div class="mb-3">
                         <span class="bus-type-badge bg-primary text-white">
-                            {{ bus.get_bus_type_display }}
+                            <i class="bi bi-tag me-1"></i> {{ bus.get_bus_type_display }}
                         </span>
-                        <span class="badge bg-light text-dark">
-                            <i class="bi bi-grid-3x3"></i> {{ bus.seat_layout.total_seats }} seats
+                        <span class="badge bg-light text-dark ms-1">
+                            <i class="bi bi-grid-3x3 me-1"></i> {{ bus.seat_layout.total_seats }} seats
                         </span>
                     </div>
                     
@@ -167,29 +278,36 @@
                             <i class="bi bi-star"></i>
                             {% endif %}
                         {% endfor %}
-                        <span class="text-muted small">({{ bus.total_ratings }})</span>
+                        <span class="text-muted small ms-1">({{ bus.total_ratings }})</span>
                     </div>
                     {% endif %}
                     
                     {% if bus.amenities.exists %}
                     <div class="amenity-icons mb-3">
+                        <small class="text-muted d-block mb-1">Amenities:</small>
                         {% for amenity in bus.amenities.all|slice:":5" %}
-                        <span class="amenity-icon" title="{{ amenity.name }}">{{ amenity.icon }}</span>
+                        <span class="amenity-icon" title="{{ amenity.name }}">
+                            {% if amenity.icon %}
+                                {{ amenity.icon }}
+                            {% else %}
+                                <i class="bi bi-check-circle"></i>
+                            {% endif %}
+                        </span>
                         {% endfor %}
                         {% if bus.amenities.count > 5 %}
-                        <small class="text-muted">+{{ bus.amenities.count|add:"-5" }} more</small>
+                        <small class="text-muted ms-1">+{{ bus.amenities.count|add:"-5" }} more</small>
                         {% endif %}
                     </div>
                     {% endif %}
                 </div>
                 
-                <div class="card-footer bg-transparent border-top-0">
+                <div class="card-footer">
                     <div class="d-flex gap-2">
                         <a href="{% url 'bus_detail' bus.pk %}" class="btn btn-sm btn-outline-primary flex-fill">
-                            <i class="bi bi-eye"></i> View
+                            <i class="bi bi-eye me-1"></i> View Details
                         </a>
                         <a href="{% url 'bus_edit' bus.pk %}" class="btn btn-sm btn-outline-secondary flex-fill">
-                            <i class="bi bi-pencil"></i> Edit
+                            <i class="bi bi-pencil me-1"></i> Edit
                         </a>
                     </div>
                 </div>
@@ -198,9 +316,15 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="alert alert-info text-center">
-        <i class="bi bi-info-circle"></i> No buses found. 
-        <a href="{% url 'bus_add' %}">Add your first bus</a>
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-bus-front"></i>
+        </div>
+        <h4 class="text-muted">No buses found</h4>
+        <p class="text-muted mb-3">Get started by adding your first bus to the fleet.</p>
+        <a href="{% url 'bus_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Add New Bus
+        </a>
     </div>
     {% endif %}
 </div>
