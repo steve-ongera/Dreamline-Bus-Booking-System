@@ -5,34 +5,11 @@
 
 {% block extra_css %}
 <style>
-    .breadcrumb-container {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #e9ecef;
-        padding: 0.75rem 0;
-        margin-bottom: 1.5rem;
-    }
-    
-    .breadcrumb {
-        margin-bottom: 0;
-        padding: 0.5rem 0;
-        background-color: transparent;
-    }
-    
-    .breadcrumb-item a {
-        color: #6c757d;
-        text-decoration: none;
-    }
-    
-    .breadcrumb-item.active {
-        color: #495057;
-        font-weight: 500;
-    }
-    
     .page-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
         padding-bottom: 1rem;
         border-bottom: 1px solid #e9ecef;
     }
@@ -44,81 +21,137 @@
         font-weight: 600;
         color: #343a40;
         margin: 0;
+        font-size: 1.5rem;
     }
     
-    .filter-section {
-        background: white;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid #e9ecef;
-    }
-    
-    .booking-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid #e9ecef;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-        margin-bottom: 1rem;
-        background: white;
-    }
-    
-    .booking-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-        border-color: #007bff;
-    }
-    
-    .booking-header {
-        background: #f8f9fa;
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid #e9ecef;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .booking-ref {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #007bff;
-    }
-    
-    .booking-body {
-        padding: 1.25rem;
-    }
-    
-    .booking-info {
+    .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
-        margin-bottom: 1rem;
+        margin-bottom: 2rem;
     }
     
-    .info-item {
-        display: flex;
-        gap: 0.75rem;
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
     }
     
-    .info-icon {
-        width: 36px;
-        height: 36px;
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.warning { border-left-color: #ffc107; }
+    .stat-card.success { border-left-color: #28a745; }
+    .stat-card.danger { border-left-color: #dc3545; }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        color: #343a40;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+    
+    .filter-header {
         background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        font-weight: 600;
+        color: #495057;
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: #007bff;
-        border-radius: 6px;
+        gap: 0.5rem;
     }
     
-    .info-label {
-        font-size: 0.75rem;
-        color: #6c757d;
+    .filter-body {
+        padding: 1.5rem;
+    }
+    
+    .table-responsive {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .table {
+        margin: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .table thead th {
+        background: #f8f9fa;
+        border-bottom: 2px solid #e9ecef;
+        padding: 1rem 0.75rem;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .table tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f3f4;
+        font-size: 0.875rem;
+    }
+    
+    .table tbody tr {
+        transition: background-color 0.15s;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .booking-ref {
+        font-weight: 600;
+        color: #007bff;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.8rem;
+    }
+    
+    .customer-info {
+        min-width: 180px;
+    }
+    
+    .customer-name {
+        font-weight: 600;
+        color: #343a40;
         margin-bottom: 0.125rem;
     }
     
-    .info-value {
-        font-weight: 600;
-        color: #343a40;
-        font-size: 0.875rem;
+    .customer-contact {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .route-info {
+        min-width: 160px;
     }
     
     .route-display {
@@ -126,287 +159,336 @@
         align-items: center;
         gap: 0.5rem;
         font-weight: 500;
-    }
-    
-    .stats-card {
-        background: white;
-        border: 1px solid #e9ecef;
-        padding: 1.25rem;
-        text-align: center;
-        transition: transform 0.2s;
-    }
-    
-    .stats-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    }
-    
-    .stats-number {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-    
-    .stats-label {
-        color: #6c757d;
         font-size: 0.875rem;
     }
     
+    .trip-details {
+        min-width: 140px;
+    }
+    
+    .trip-date {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.125rem;
+    }
+    
+    .trip-time {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .seats-info {
+        min-width: 120px;
+    }
+    
+    .seats-badge {
+        background: #e7f3ff;
+        color: #007bff;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .amount {
+        font-weight: 600;
+        color: #28a745;
+        font-size: 0.875rem;
+    }
+    
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-confirmed { background: #d1edff; color: #0c5460; }
+    .badge-paid { background: #d4edda; color: #155724; }
+    .badge-cancelled { background: #f8d7da; color: #721c24; }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.375rem;
+        min-width: 100px;
+    }
+    
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 6px;
+    }
+    
     .empty-state {
-        padding: 3rem 1.5rem;
+        padding: 4rem 2rem;
         text-align: center;
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
     .empty-state-icon {
         font-size: 3rem;
         color: #adb5bd;
         margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 6px;
+        border: 1px solid #e1e5e9;
+        font-size: 0.875rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.1);
+    }
+    
+    .input-group-text {
+        background: #f8f9fa;
+        border: 1px solid #e1e5e9;
+        border-right: none;
+    }
+    
+    .input-group .form-control {
+        border-left: none;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .table-responsive {
+            font-size: 0.8rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .btn-icon {
+            width: 28px;
+            height: 28px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="breadcrumb-container">
-    <div class="container-fluid">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
-                <li class="breadcrumb-item active" aria-current="page">All Bookings</li>
-            </ol>
-        </nav>
-    </div>
-</div>
-
-<div class="container-fluid py-3">
+<div class="container-fluid py-4">
+    <!-- Page Header -->
     <div class="page-header">
         <h1 class="page-title">
             <i class="bi bi-ticket-perforated text-primary"></i>
             Booking Management
         </h1>
         <a href="{% url 'export_bookings' %}?{{ request.GET.urlencode }}" class="btn btn-success">
-            <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
+            <i class="bi bi-file-earmark-excel me-2"></i> Export Excel
         </a>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-primary">{{ all_count }}</div>
-                <div class="stats-label">Total Bookings</div>
-            </div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number text-primary">{{ all_count }}</div>
+            <div class="stat-label">Total Bookings</div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-warning">{{ pending_payments_count }}</div>
-                <div class="stats-label">Pending Payments</div>
-            </div>
+        <div class="stat-card warning">
+            <div class="stat-number text-warning">{{ pending_payments_count }}</div>
+            <div class="stat-label">Pending Payments</div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-success">{{ confirmed_count }}</div>
-                <div class="stats-label">Confirmed</div>
-            </div>
+        <div class="stat-card success">
+            <div class="stat-number text-success">{{ confirmed_count }}</div>
+            <div class="stat-label">Confirmed</div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-danger">{{ cancelled_count }}</div>
-                <div class="stats-label">Cancelled</div>
-            </div>
+        <div class="stat-card danger">
+            <div class="stat-number text-danger">{{ cancelled_count }}</div>
+            <div class="stat-label">Cancelled</div>
         </div>
     </div>
 
     <!-- Filter Section -->
-    <div class="filter-section">
-        <form method="get" id="filterForm">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-search text-muted"></i>
-                        </span>
-                        <input type="text" name="search" class="form-control" 
-                               placeholder="Ref, name, phone, email..." value="{{ search }}">
+    <div class="filter-card">
+        <div class="filter-header">
+            <i class="bi bi-funnel"></i>
+            Filter Bookings
+        </div>
+        <div class="filter-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Ref, name, phone..." value="{{ search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">Booking Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            {% for value, label in booking_statuses %}
+                            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">Payment Status</label>
+                        <select name="payment_status" class="form-select">
+                            <option value="">All Statuses</option>
+                            {% for value, label in payment_statuses %}
+                            <option value="{{ value }}" {% if selected_payment_status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">From Date</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">To Date</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-funnel"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Booking Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">All Statuses</option>
-                        {% for value, label in booking_statuses %}
-                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Operator</label>
+                        <select name="operator" class="form-select">
+                            <option value="">All Operators</option>
+                            {% for op in operators %}
+                            <option value="{{ op.id }}" {% if selected_operator == op.id|stringformat:"s" %}selected{% endif %}>
+                                {{ op.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Route</label>
+                        <select name="route" class="form-select">
+                            <option value="">All Routes</option>
+                            {% for route in routes %}
+                            <option value="{{ route.route__origin_id }}-{{ route.route__destination_id }}" 
+                                    {% if selected_route == route.route__origin_id|stringformat:"s"|add:"-"|add:route.route__destination_id|stringformat:"s" %}selected{% endif %}>
+                                {{ route.route__origin__name }} → {{ route.route__destination__name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Payment Status</label>
-                    <select name="payment_status" class="form-select">
-                        <option value="">All Statuses</option>
-                        {% for value, label in payment_statuses %}
-                        <option value="{{ value }}" {% if selected_payment_status == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">From Date</label>
-                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">To Date</label>
-                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
-                </div>
-                <div class="col-md-1 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-funnel"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="row g-3 mt-2">
-                <div class="col-md-3">
-                    <label class="form-label">Operator</label>
-                    <select name="operator" class="form-select">
-                        <option value="">All Operators</option>
-                        {% for op in operators %}
-                        <option value="{{ op.id }}" {% if selected_operator == op.id|stringformat:"s" %}selected{% endif %}>
-                            {{ op.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Route</label>
-                    <select name="route" class="form-select">
-                        <option value="">All Routes</option>
-                        {% for route in routes %}
-                        <option value="{{ route.route__origin_id }}-{{ route.route__destination_id }}" 
-                                {% if selected_route == route.route__origin_id|stringformat:"s"|add:"-"|add:route.route__destination_id|stringformat:"s" %}selected{% endif %}>
-                            {{ route.route__origin__name }} → {{ route.route__destination__name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
-    <!-- Bookings List -->
+    <!-- Bookings Table -->
     {% if bookings %}
-    <div class="row">
-        {% for booking in bookings %}
-        <div class="col-12">
-            <div class="booking-card">
-                <div class="booking-header">
-                    <div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Booking Ref</th>
+                    <th>Customer</th>
+                    <th>Route</th>
+                    <th>Trip Details</th>
+                    <th>Seats</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td>
                         <div class="booking-ref">{{ booking.booking_reference }}</div>
-                        <small class="text-muted">
-                            <i class="bi bi-calendar3 me-1"></i>{{ booking.created_at|date:"M d, Y H:i" }}
-                        </small>
-                    </div>
-                    <span class="badge {% if booking.status == 'paid' or booking.status == 'confirmed' %}bg-success{% elif booking.status == 'pending' %}bg-warning{% elif booking.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                        {{ booking.get_status_display }}
-                    </span>
-                </div>
-
-                <div class="booking-body">
-                    <div class="booking-info">
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <i class="bi bi-person"></i>
-                            </div>
-                            <div class="info-details">
-                                <div class="info-label">Customer</div>
-                                <div class="info-value">{{ booking.customer_full_name }}</div>
-                            </div>
+                        <small class="text-muted">{{ booking.created_at|date:"M d, Y" }}</small>
+                    </td>
+                    <td class="customer-info">
+                        <div class="customer-name">{{ booking.customer_full_name }}</div>
+                        <div class="customer-contact">
+                            <i class="bi bi-telephone me-1"></i>{{ booking.customer_phone }}
                         </div>
-
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <i class="bi bi-telephone"></i>
-                            </div>
-                            <div class="info-details">
-                                <div class="info-label">Phone</div>
-                                <div class="info-value">{{ booking.customer_phone }}</div>
-                            </div>
+                    </td>
+                    <td class="route-info">
+                        <div class="route-display">
+                            <span>{{ booking.trip.route.origin.name }}</span>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                            <span>{{ booking.trip.route.destination.name }}</span>
                         </div>
-
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <i class="bi bi-geo-alt"></i>
-                            </div>
-                            <div class="info-details">
-                                <div class="info-label">Route</div>
-                                <div class="route-display">
-                                    <span>{{ booking.trip.route.origin.name }}</span>
-                                    <i class="bi bi-arrow-right text-muted"></i>
-                                    <span>{{ booking.trip.route.destination.name }}</span>
-                                </div>
-                            </div>
+                    </td>
+                    <td class="trip-details">
+                        <div class="trip-date">{{ booking.trip.departure_date|date:"M d, Y" }}</div>
+                        <div class="trip-time">
+                            <i class="bi bi-clock me-1"></i>{{ booking.trip.departure_time|time:"H:i" }}
                         </div>
-
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <i class="bi bi-calendar-event"></i>
-                            </div>
-                            <div class="info-details">
-                                <div class="info-label">Travel Date</div>
-                                <div class="info-value">{{ booking.trip.departure_date|date:"M d, Y" }}</div>
-                            </div>
+                    </td>
+                    <td class="seats-info">
+                        <span class="seats-badge">
+                            <i class="bi bi-grid-3x3 me-1"></i>{{ booking.seats_count }} seat{{ booking.seats_count|pluralize }}
+                        </span>
+                    </td>
+                    <td class="amount">
+                        KES {{ booking.total_amount|floatformat:2 }}
+                    </td>
+                    <td>
+                        <span class="status-badge badge-{{ booking.status }}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{% url 'booking_detail' booking.pk %}" 
+                               class="btn btn-outline-primary btn-icon" 
+                               title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if booking.status == 'pending' %}
+                            <button class="btn btn-outline-danger btn-icon" 
+                                    onclick="cancelBooking({{ booking.pk }})"
+                                    title="Cancel Booking">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            {% endif %}
                         </div>
-
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <i class="bi bi-grid-3x3"></i>
-                            </div>
-                            <div class="info-details">
-                                <div class="info-label">Seats ({{ booking.seats_count }})</div>
-                                <div class="info-value">
-                                    {% for sb in booking.seat_bookings.all %}
-                                        {{ sb.seat.seat_number }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <i class="bi bi-cash"></i>
-                            </div>
-                            <div class="info-details">
-                                <div class="info-label">Total Amount</div>
-                                <div class="info-value">KES {{ booking.total_amount|floatformat:2 }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'booking_detail' booking.pk %}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye me-1"></i> View Details
-                        </a>
-                        {% if booking.status == 'pending' %}
-                        <button class="btn btn-outline-danger btn-sm" onclick="cancelBooking({{ booking.pk }})">
-                            <i class="bi bi-x-circle me-1"></i> Cancel
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% else %}
     <div class="empty-state">
         <div class="empty-state-icon">
             <i class="bi bi-ticket-perforated"></i>
         </div>
-        <h4 class="text-muted">No bookings found</h4>
-        <p class="text-muted mb-0">Try adjusting your filters</p>
+        <h4 class="text-muted mb-2">No bookings found</h4>
+        <p class="text-muted mb-0">Try adjusting your search filters</p>
     </div>
     {% endif %}
 </div>
