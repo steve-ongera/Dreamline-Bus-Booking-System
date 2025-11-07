@@ -1,103 +1,179 @@
 {% extends 'admin_base.html' %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }} - Layout Designer{% endblock %}
 
 {% block extra_css %}
 <style>
-    .layout-designer {
-        max-width: 1400px;
-        margin: 0 auto;
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
     }
     
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title-section h1 {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.25rem;
+        font-size: 1.5rem;
+    }
+    
+    .page-subtitle {
+        color: #6c757d;
+        font-size: 0.95rem;
+    }
+    
+    /* Main layout */
     .designer-container {
         display: grid;
-        grid-template-columns: 350px 1fr;
-        gap: 2rem;
-        margin-top: 2rem;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
+        margin-top: 1rem;
     }
     
+    /* Control Panel */
     .control-panel {
         background: white;
         padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        border: 1px solid #e9ecef;
         height: fit-content;
         position: sticky;
         top: 20px;
     }
     
     .section-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 600;
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #495057;
+    }
+    
+    /* Canvas Area */
+    .canvas-area {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        border: 1px solid #e9ecef;
+        min-height: 500px;
+    }
+    
+    .canvas-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .canvas-title {
+        font-weight: 600;
+        color: #495057;
+        margin: 0;
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
     
-    .canvas-area {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        min-height: 600px;
-    }
-    
     .bus-canvas {
         background: #f8f9fa;
-        border-radius: 12px;
-        padding: 2rem;
-        min-height: 500px;
+        border-radius: 8px;
+        padding: 1.5rem;
+        min-height: 400px;
+        border: 1px solid #e9ecef;
         position: relative;
     }
     
+    /* Driver Section */
     .driver-section {
         text-align: center;
         padding: 1rem;
-        margin-bottom: 2rem;
-        border-bottom: 3px solid #dee2e6;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #dee2e6;
     }
     
     .driver-seat {
         display: inline-block;
-        padding: 1rem 2rem;
+        padding: 0.75rem 1.5rem;
         background: #343a40;
         color: white;
-        border-radius: 12px;
-        font-weight: bold;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
     }
     
+    /* Seat Rows */
     .seat-rows-container {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
     
     .seat-row {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
         padding: 8px;
         background: white;
-        border-radius: 8px;
+        border-radius: 6px;
         position: relative;
+        border: 1px solid #e9ecef;
     }
     
     .row-controls {
         position: absolute;
-        right: -35px;
+        right: -32px;
         display: flex;
         flex-direction: column;
         gap: 4px;
     }
     
     .row-controls button {
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
         padding: 0;
         border-radius: 50%;
         border: none;
@@ -107,7 +183,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        transition: background 0.2s;
     }
     
     .row-controls button:hover {
@@ -115,24 +192,26 @@
     }
     
     .row-number {
-        min-width: 40px;
+        min-width: 35px;
         text-align: center;
         font-weight: 600;
-        color: #6c757d;
+        color: #495057;
+        font-size: 0.8rem;
     }
     
+    /* Seats */
     .seat {
-        width: 55px;
-        height: 55px;
-        border-radius: 10px 10px 4px 4px;
+        width: 45px;
+        height: 45px;
+        border-radius: 8px 8px 3px 3px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem;
-        font-weight: bold;
+        font-size: 0.7rem;
+        font-weight: 600;
         cursor: move;
         transition: all 0.2s;
-        border: 3px solid;
+        border: 2px solid;
         position: relative;
         user-select: none;
     }
@@ -140,36 +219,36 @@
     .seat::before {
         content: '';
         position: absolute;
-        top: -6px;
+        top: -5px;
         left: 50%;
         transform: translateX(-50%);
-        width: 35px;
-        height: 4px;
+        width: 28px;
+        height: 3px;
         background: inherit;
-        border-radius: 3px 3px 0 0;
+        border-radius: 2px 2px 0 0;
     }
     
     .seat.vip {
         background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        border-color: #FF8C00;
+        border-color: #e6b800;
         color: #fff;
     }
     
     .seat.business {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-color: #5568d3;
+        border-color: #5a6fd8;
         color: #fff;
     }
     
     .seat.normal {
-        background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
-        border-color: #2D9CDB;
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        border-color: #5a6268;
         color: #fff;
     }
     
     .seat.dragging {
         opacity: 0.5;
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
     
     .seat.drag-over {
@@ -178,9 +257,9 @@
     }
     
     .aisle {
-        width: 40px;
-        min-width: 40px;
-        height: 55px;
+        width: 35px;
+        min-width: 35px;
+        height: 45px;
         position: relative;
     }
     
@@ -194,17 +273,25 @@
         background: linear-gradient(to bottom, transparent, #dee2e6 50%, transparent);
     }
     
+    /* Seat Templates */
+    .template-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    
     .seat-template {
-        width: 50px;
-        height: 50px;
-        border-radius: 8px;
+        width: 45px;
+        height: 45px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: grab;
         border: 2px solid;
-        font-weight: bold;
-        font-size: 0.75rem;
+        font-weight: 600;
+        font-size: 0.7rem;
         transition: all 0.2s;
     }
     
@@ -216,55 +303,46 @@
         cursor: grabbing;
     }
     
-    .template-grid {
+    /* Quick Layouts */
+    .quick-layouts {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        margin-top: 1rem;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
     }
     
-    .btn-add-row {
-        width: 100%;
-        margin-top: 1rem;
+    .quick-layout-btn {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        font-size: 0.8rem;
     }
     
-    .stats-box {
-        background: #e7f3ff;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 1rem;
+    .quick-layout-btn:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
     }
     
-    .stat-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(0,0,0,0.1);
-    }
-    
-    .stat-item:last-child {
-        border-bottom: none;
-    }
-    
-    .stat-value {
-        font-weight: bold;
-        color: #007bff;
-    }
-    
+    /* Door Position Selector */
     .door-position-selector {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr 1fr;
         gap: 0.5rem;
         margin-top: 0.5rem;
     }
     
     .door-option {
-        padding: 0.75rem;
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
+        padding: 0.6rem;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
         text-align: center;
         cursor: pointer;
         transition: all 0.2s;
+        font-size: 0.8rem;
     }
     
     .door-option:hover {
@@ -275,62 +353,71 @@
     .door-option.active {
         border-color: #007bff;
         background: #e7f3ff;
-        font-weight: bold;
+        font-weight: 600;
     }
     
+    /* Statistics */
+    .stats-box {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.4rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        font-size: 0.875rem;
+    }
+    
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+    
+    .stat-value {
+        font-weight: 600;
+        color: #007bff;
+    }
+    
+    /* Empty State */
     .empty-canvas {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-height: 400px;
+        min-height: 300px;
         color: #6c757d;
+        text-align: center;
     }
     
     .empty-canvas i {
-        font-size: 4rem;
+        font-size: 3rem;
         margin-bottom: 1rem;
+        opacity: 0.5;
     }
     
+    /* Action Buttons */
     .action-buttons {
         display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 2px solid #e9ecef;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e9ecef;
     }
     
-    .quick-layouts {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-        margin-top: 1rem;
-    }
-    
-    .quick-layout-btn {
-        padding: 0.75rem;
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
-        background: white;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: center;
-        font-size: 0.875rem;
-    }
-    
-    .quick-layout-btn:hover {
-        border-color: #007bff;
-        background: #f8f9fa;
-    }
-    
+    /* Context Menu */
     .context-menu {
         position: fixed;
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         display: none;
         z-index: 1000;
+        min-width: 160px;
     }
     
     .context-menu.show {
@@ -340,12 +427,13 @@
     .context-menu button {
         display: block;
         width: 100%;
-        padding: 0.75rem 1.5rem;
+        padding: 0.6rem 1rem;
         border: none;
         background: none;
         text-align: left;
         cursor: pointer;
         transition: background 0.2s;
+        font-size: 0.875rem;
     }
     
     .context-menu button:hover {
@@ -353,214 +441,282 @@
     }
     
     .context-menu button:first-child {
-        border-radius: 8px 8px 0 0;
+        border-radius: 6px 6px 0 0;
     }
     
     .context-menu button:last-child {
-        border-radius: 0 0 8px 8px;
+        border-radius: 0 0 6px 6px;
+    }
+    
+    /* Form Elements */
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 992px) {
+        .designer-container {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .control-panel {
+            position: static;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .seat {
+            width: 40px;
+            height: 40px;
+            font-size: 0.65rem;
+        }
+        
+        .aisle {
+            width: 30px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .canvas-area,
+        .control-panel {
+            padding: 1rem;
+        }
+        
+        .bus-canvas {
+            padding: 1rem;
+        }
+        
+        .row-controls {
+            right: -28px;
+        }
+        
+        .row-controls button {
+            width: 24px;
+            height: 24px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="layout-designer">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <a href="{% if layout %}{% url 'layout_detail' layout.pk %}{% else %}{% url 'layout_list' %}{% endif %}" 
-                   class="btn btn-outline-secondary btn-sm mb-2">
-                    <i class="bi bi-arrow-left"></i> Back
-                </a>
-                <h2><i class="bi bi-grid-3x3"></i> {{ title }}</h2>
-                <p class="text-muted">Drag and drop seats to design your bus layout</p>
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'layout_list' %}">Seat Layouts</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Layout Designer</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <a href="{% if layout %}{% url 'layout_detail' layout.pk %}{% else %}{% url 'layout_list' %}{% endif %}" 
+               class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+            <h1><i class="bi bi-grid-3x3 text-primary"></i> {{ title }}</h1>
+            <p class="page-subtitle">Design your bus seat layout using drag and drop</p>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="layoutForm">
+        {% csrf_token %}
+        
+        <!-- Hidden fields for form data -->
+        <input type="hidden" name="name" id="id_name" value="{{ form.name.value|default:'' }}">
+        <input type="hidden" name="total_rows" id="id_total_rows" value="{{ form.total_rows.value|default:'0' }}">
+        <input type="hidden" name="seats_per_row" id="id_seats_per_row" value="{{ form.seats_per_row.value|default:'0' }}">
+        <input type="hidden" name="total_seats" id="id_total_seats" value="{{ form.total_seats.value|default:'0' }}">
+        <input type="hidden" name="layout_config_text" id="id_layout_config_text">
+        
+        <div class="designer-container">
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- Basic Information -->
+                <div class="mb-4">
+                    <h3 class="section-title">
+                        <i class="bi bi-info-circle"></i> Basic Information
+                    </h3>
+                    <div class="mb-3">
+                        <label class="form-label">Layout Name *</label>
+                        <input type="text" class="form-control form-control-sm" id="layoutName" 
+                               placeholder="e.g., 2x2 Standard Layout" required
+                               value="{{ form.name.value|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Layout Image</label>
+                        {{ form.image }}
+                    </div>
+                </div>
+
+                <!-- Quick Layouts -->
+                <div class="mb-4">
+                    <h3 class="section-title">
+                        <i class="bi bi-lightning"></i> Quick Templates
+                    </h3>
+                    <div class="quick-layouts">
+                        <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x2', 12)">
+                            2x2 Standard
+                        </button>
+                        <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x1', 10)">
+                            2x1 VIP
+                        </button>
+                        <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x2', 15)">
+                            2x2 Luxury
+                        </button>
+                        <button type="button" class="quick-layout-btn" onclick="createQuickLayout('1x1', 8)">
+                            1x1 Sleeper
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Seat Templates -->
+                <div class="mb-4">
+                    <h3 class="section-title">
+                        <i class="bi bi-plus-square"></i> Add Seats
+                    </h3>
+                    <div class="template-grid">
+                        <div class="seat-template vip" draggable="true" data-class="vip">
+                            VIP
+                        </div>
+                        <div class="seat-template business" draggable="true" data-class="business">
+                            BUS
+                        </div>
+                        <div class="seat-template normal" draggable="true" data-class="normal">
+                            ECO
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="addRow()">
+                        <i class="bi bi-plus-circle me-1"></i> Add Row
+                    </button>
+                </div>
+
+                <!-- Door Position -->
+                <div class="mb-4">
+                    <h3 class="section-title">
+                        <i class="bi bi-door-open"></i> Door Position
+                    </h3>
+                    <div class="door-position-selector">
+                        <div class="door-option active" data-position="front-left" onclick="selectDoorPosition(this)">
+                            Front Left
+                        </div>
+                        <div class="door-option" data-position="front-right" onclick="selectDoorPosition(this)">
+                            Front Right
+                        </div>
+                        <div class="door-option" data-position="rear-left" onclick="selectDoorPosition(this)">
+                            Rear Left
+                        </div>
+                        <div class="door-option" data-position="rear-right" onclick="selectDoorPosition(this)">
+                            Rear Right
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-box">
+                    <h3 class="section-title">
+                        <i class="bi bi-bar-chart"></i> Layout Statistics
+                    </h3>
+                    <div class="stat-item">
+                        <span>Total Rows:</span>
+                        <span class="stat-value" id="statRows">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Total Seats:</span>
+                        <span class="stat-value" id="statSeats">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>VIP Seats:</span>
+                        <span class="stat-value" id="statVIP">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Business:</span>
+                        <span class="stat-value" id="statBusiness">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Economy:</span>
+                        <span class="stat-value" id="statNormal">0</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button type="button" class="btn btn-outline-danger btn-sm flex-fill" onclick="clearLayout()">
+                        <i class="bi bi-trash me-1"></i> Clear All
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-check-circle me-1"></i> Save Layout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="canvas-area">
+                <div class="canvas-header">
+                    <h3 class="canvas-title">
+                        <i class="bi bi-brush"></i> Design Canvas
+                    </h3>
+                    <div class="canvas-controls">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOut()">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomIn()">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bus-canvas" id="busCanvas">
+                    <div class="driver-section">
+                        <div class="driver-seat">
+                            <i class="bi bi-steering-wheel me-1"></i> DRIVER
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-arrow-up me-1"></i> Front of Bus
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="seat-rows-container" id="seatRowsContainer">
+                        <div class="empty-canvas">
+                            <i class="bi bi-cursor"></i>
+                            <h5>Start Designing</h5>
+                            <p class="mb-0">Drag seats from the panel or use quick templates</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <form method="post" enctype="multipart/form-data" id="layoutForm">
-            {% csrf_token %}
-            
-            <!-- Hidden fields for form data -->
-            <input type="hidden" name="name" id="id_name" value="{{ form.name.value|default:'' }}">
-            <input type="hidden" name="total_rows" id="id_total_rows" value="{{ form.total_rows.value|default:'0' }}">
-            <input type="hidden" name="seats_per_row" id="id_seats_per_row" value="{{ form.seats_per_row.value|default:'0' }}">
-            <input type="hidden" name="total_seats" id="id_total_seats" value="{{ form.total_seats.value|default:'0' }}">
-            <input type="hidden" name="layout_config_text" id="id_layout_config_text">
-            
-            <div class="designer-container">
-                <!-- Control Panel -->
-                <div class="control-panel">
-                    <!-- Basic Info -->
-                    <div class="mb-4">
-                        <h3 class="section-title">
-                            <i class="bi bi-info-circle"></i> Basic Info
-                        </h3>
-                        <div class="mb-3">
-                            <label class="form-label">Layout Name *</label>
-                            <input type="text" class="form-control" id="layoutName" 
-                                   placeholder="e.g., 2x2 Standard" required
-                                   value="{{ form.name.value|default:'' }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Layout Image</label>
-                            {{ form.image }}
-                        </div>
-                    </div>
-
-                    <!-- Quick Layouts -->
-                    <div class="mb-4">
-                        <h3 class="section-title">
-                            <i class="bi bi-lightning"></i> Quick Layouts
-                        </h3>
-                        <div class="quick-layouts">
-                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x2', 12)">
-                                2x2<br><small>Standard</small>
-                            </button>
-                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x1', 10)">
-                                2x1<br><small>VIP</small>
-                            </button>
-                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x2', 15)">
-                                2x2<br><small>Luxury</small>
-                            </button>
-                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('1x1', 8)">
-                                1x1<br><small>Sleeper</small>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Seat Templates -->
-                    <div class="mb-4">
-                        <h3 class="section-title">
-                            <i class="bi bi-plus-square"></i> Add Seats
-                        </h3>
-                        <div class="template-grid">
-                            <div class="seat-template vip" draggable="true" data-class="vip">
-                                VIP
-                            </div>
-                            <div class="seat-template business" draggable="true" data-class="business">
-                                BUS
-                            </div>
-                            <div class="seat-template normal" draggable="true" data-class="normal">
-                                NOR
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-outline-primary btn-add-row" onclick="addRow()">
-                            <i class="bi bi-plus-circle"></i> Add Row
-                        </button>
-                    </div>
-
-                    <!-- Door Position -->
-                    <div class="mb-4">
-                        <h3 class="section-title">
-                            <i class="bi bi-door-open"></i> Door Position
-                        </h3>
-                        <div class="door-position-selector">
-                            <div class="door-option active" data-position="front-left" onclick="selectDoorPosition(this)">
-                                Front Left
-                            </div>
-                            <div class="door-option" data-position="front-right" onclick="selectDoorPosition(this)">
-                                Front Right
-                            </div>
-                            <div class="door-option" data-position="rear-left" onclick="selectDoorPosition(this)">
-                                Rear Left
-                            </div>
-                            <div class="door-option" data-position="rear-right" onclick="selectDoorPosition(this)">
-                                Rear Right
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Statistics -->
-                    <div class="stats-box">
-                        <h3 class="section-title">
-                            <i class="bi bi-bar-chart"></i> Statistics
-                        </h3>
-                        <div class="stat-item">
-                            <span>Total Rows:</span>
-                            <span class="stat-value" id="statRows">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>Total Seats:</span>
-                            <span class="stat-value" id="statSeats">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>VIP Seats:</span>
-                            <span class="stat-value" id="statVIP">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>Business:</span>
-                            <span class="stat-value" id="statBusiness">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>Normal:</span>
-                            <span class="stat-value" id="statNormal">0</span>
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="action-buttons">
-                        <button type="button" class="btn btn-outline-danger flex-fill" onclick="clearLayout()">
-                            <i class="bi bi-trash"></i> Clear
-                        </button>
-                        <button type="submit" class="btn btn-primary flex-fill">
-                            <i class="bi bi-check-circle"></i> Save
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Canvas Area -->
-                <div class="canvas-area">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="mb-0"><i class="bi bi-brush"></i> Design Canvas</h3>
-                        <div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOut()">
-                                <i class="bi bi-dash"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomIn()">
-                                <i class="bi bi-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bus-canvas" id="busCanvas">
-                        <div class="driver-section">
-                            <div class="driver-seat">
-                                <i class="bi bi-steering-wheel"></i> DRIVER
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-arrow-up"></i> Front of Bus
-                                </small>
-                            </div>
-                        </div>
-
-                        <div class="seat-rows-container" id="seatRowsContainer">
-                            <div class="empty-canvas">
-                                <i class="bi bi-cursor"></i>
-                                <h4>Start Designing</h4>
-                                <p>Drag seats from the left panel or use quick layouts</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
+    </form>
 </div>
 
 <!-- Context Menu -->
 <div class="context-menu" id="contextMenu">
     <button onclick="changeSeatClass('vip')">
-        <i class="bi bi-star-fill text-warning"></i> Change to VIP
+        <i class="bi bi-star-fill text-warning me-2"></i> VIP Class
     </button>
     <button onclick="changeSeatClass('business')">
-        <i class="bi bi-briefcase-fill text-primary"></i> Change to Business
+        <i class="bi bi-briefcase-fill text-primary me-2"></i> Business Class
     </button>
     <button onclick="changeSeatClass('normal')">
-        <i class="bi bi-person-fill text-info"></i> Change to Normal
+        <i class="bi bi-person-fill text-info me-2"></i> Economy Class
     </button>
     <button onclick="deleteSeat()" class="text-danger">
-        <i class="bi bi-trash"></i> Delete Seat
+        <i class="bi bi-trash me-2"></i> Delete Seat
     </button>
 </div>
 {% endblock %}
