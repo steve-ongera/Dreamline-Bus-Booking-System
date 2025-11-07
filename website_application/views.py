@@ -2239,6 +2239,180 @@ def route_detail(request, pk):
     return render(request, 'admin/routes/route_detail.html', context)
 
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db import transaction
+from django.http import JsonResponse
+from datetime import timedelta
+import json
+from .models import Route, RouteStop, BoardingPoint, Location
+
+
+def route_edit(request, pk):
+    """Edit route with dynamic stops management"""
+    route = get_object_or_404(Route, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Update basic route information
+                route.distance_km = request.POST.get('distance_km')
+                route.is_active = request.POST.get('is_active') == 'on'
+                
+                # Convert duration hours to timedelta
+                duration_hours = float(request.POST.get('duration_hours', 0))
+                route.estimated_duration = timedelta(hours=duration_hours)
+                route.save()
+                
+                # Delete existing stops
+                route.stops.all().delete()
+                
+                # Process stops from form data
+                stops_data = {}
+                for key, value in request.POST.items():
+                    if key.startswith('stops['):
+                        # Parse: stops[1][boarding_point]
+                        parts = key.replace('stops[', '').replace(']', '').split('[')
+                        stop_id = parts[0]
+                        field_name = parts[1] if len(parts) > 1 else None
+                        
+                        if stop_id not in stops_data:
+                            stops_data[stop_id] = {}
+                        
+                        if field_name:
+                            stops_data[stop_id][field_name] = value
+                
+                # Create new stops
+                for stop_id, stop_data in stops_data.items():
+                    if not stop_data.get('boarding_point'):
+                        continue
+                    
+                    # Parse time_from_origin (HH:MM format)
+                    time_str = stop_data.get('time_from_origin', '00:00')
+                    try:
+                        hours, minutes = map(int, time_str.split(':'))
+                        time_from_origin = timedelta(hours=hours, minutes=minutes)
+                    except:
+                        time_from_origin = timedelta(0)
+                    
+                    RouteStop.objects.create(
+                        route=route,
+                        boarding_point_id=stop_data.get('boarding_point'),
+                        stop_order=int(stop_data.get('stop_order', 0)),
+                        time_from_origin=time_from_origin,
+                        is_pickup=stop_data.get('is_pickup') == 'on' or stop_data.get('is_origin') == 'true',
+                        is_dropoff=stop_data.get('is_dropoff') == 'on' or stop_data.get('is_destination') == 'true'
+                    )
+                
+                messages.success(request, f'Route "{route}" updated successfully!')
+                return redirect('route_detail', pk=route.pk)
+                
+        except Exception as e:
+            messages.error(request, f'Error updating route: {str(e)}')
+    
+    # GET request - prepare data for template
+    existing_stops = []
+    for stop in route.stops.all():
+        # Convert timedelta to HH:MM format
+        total_seconds = int(stop.time_from_origin.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        time_str = f"{hours:02d}:{minutes:02d}"
+        
+        # Determine if origin or destination
+        is_origin = stop.stop_order == 1
+        is_destination = stop == route.stops.last()
+        
+        existing_stops.append({
+            'id': stop.id,
+            'boarding_point_id': stop.boarding_point.id,
+            'boarding_point_name': stop.boarding_point.name,
+            'stop_order': stop.stop_order,
+            'time_from_origin': time_str,
+            'is_pickup': stop.is_pickup,
+            'is_dropoff': stop.is_dropoff,
+            'is_origin': is_origin,
+            'is_destination': is_destination,
+            'is_food_stop': False,  # Add this field to your model if needed
+            'break_duration': 30
+        })
+    
+    # Get all boarding points for the dropdowns
+    boarding_points = []
+    for point in BoardingPoint.objects.filter(is_active=True).select_related('location'):
+        boarding_points.append({
+            'id': point.id,
+            'name': point.name,
+            'location_name': point.location.name,
+            'location_id': point.location.id
+        })
+    
+    # Calculate duration in hours for the form
+    duration_hours = route.estimated_duration.total_seconds() / 3600
+    
+    context = {
+        'route': route,
+        'existing_stops': json.dumps(existing_stops),
+        'boarding_points_json': json.dumps(boarding_points),
+        'all_boarding_points': BoardingPoint.objects.filter(is_active=True).select_related('location'),
+        'all_locations': Location.objects.filter(is_active=True),
+        'duration_hours': duration_hours
+    }
+    
+    return render(request, 'routes/route_edit.html', context)
+
+
+# Optional: AJAX endpoint to get boarding points by location
+def get_boarding_points_by_location(request, location_id):
+    """API endpoint to fetch boarding points for a specific location"""
+    points = BoardingPoint.objects.filter(
+        location_id=location_id, 
+        is_active=True
+    ).values('id', 'name', 'address', 'landmark')
+    
+    return JsonResponse({
+        'success': True,
+        'points': list(points)
+    })
+
+
+# Optional: Validate route stops
+def validate_route_stops(request, pk):
+    """Validate that route stops are properly configured"""
+    route = get_object_or_404(Route, pk=pk)
+    stops = route.stops.all().order_by('stop_order')
+    
+    errors = []
+    warnings = []
+    
+    if stops.count() < 2:
+        errors.append("Route must have at least 2 stops (origin and destination)")
+    
+    if stops.exists():
+        # Check first stop is pickup only
+        first_stop = stops.first()
+        if not first_stop.is_pickup or first_stop.is_dropoff:
+            warnings.append("First stop should typically be pickup only")
+        
+        # Check last stop is dropoff only
+        last_stop = stops.last()
+        if not last_stop.is_dropoff or last_stop.is_pickup:
+            warnings.append("Last stop should typically be dropoff only")
+        
+        # Check time progression
+        prev_time = timedelta(0)
+        for stop in stops:
+            if stop.time_from_origin < prev_time:
+                errors.append(f"Stop {stop.stop_order} has invalid time progression")
+            prev_time = stop.time_from_origin
+    
+    return JsonResponse({
+        'valid': len(errors) == 0,
+        'errors': errors,
+        'warnings': warnings
+    })
+
+
 # ============================================
 # LOCATIONS VIEWS
 # ============================================
