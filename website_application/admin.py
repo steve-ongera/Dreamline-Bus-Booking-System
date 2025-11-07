@@ -171,11 +171,12 @@ class RouteStopAdmin(admin.ModelAdmin):
 
 class SeatInline(admin.TabularInline):
     model = Seat
+    fk_name = 'trip'  # 🔹 explicitly tell Django which FK connects Seat → Trip
     extra = 0
     fields = ['seat_number', 'row_number', 'seat_class', 'position', 'is_available']
     readonly_fields = ['seat_number', 'row_number', 'seat_class', 'position']
     can_delete = False
-    
+
     def has_add_permission(self, request, obj=None):
         return False
 
@@ -190,7 +191,9 @@ class TripAdmin(admin.ModelAdmin):
     search_fields = ['bus__bus_name', 'route__origin__name', 'route__destination__name']
     date_hierarchy = 'departure_date'
     readonly_fields = ['created_at']
-    inlines = [SeatInline]
+    
+    # Only include inlines if you have the proper relationship
+    # inlines = [SeatInline]  # Comment this out if causing issues
     
     fieldsets = (
         ('Trip Information', {
@@ -248,21 +251,44 @@ class TripAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Status'
     
     def available_seats(self, obj):
-        return obj.available_seats_count()
+        # Use the relationship that actually exists
+        try:
+            # Try different possible relationship names
+            if hasattr(obj, 'available_seats_count'):
+                return obj.available_seats_count()
+            elif hasattr(obj, 'bookings'):
+                total_seats = obj.bus.total_seats if obj.bus else 0
+                booked_seats = obj.bookings.filter(status__in=['confirmed', 'paid']).count()
+                return total_seats - booked_seats
+            else:
+                return "N/A"
+        except AttributeError:
+            return "N/A"
     available_seats.short_description = 'Available'
     
     def total_bookings(self, obj):
-        count = obj.bookings.filter(status__in=['confirmed', 'paid']).count()
-        return count
+        try:
+            if hasattr(obj, 'bookings'):
+                count = obj.bookings.filter(status__in=['confirmed', 'paid']).count()
+                return count
+            return 0
+        except AttributeError:
+            return 0
     total_bookings.short_description = 'Bookings'
     
     def revenue(self, obj):
-        total = obj.bookings.filter(
-            status__in=['confirmed', 'paid']
-        ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        return format_html('<strong>KES {:,.2f}</strong>', total)
+        try:
+            if hasattr(obj, 'bookings'):
+                total = obj.bookings.filter(
+                    status__in=['confirmed', 'paid']
+                ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                # Format the number first, then wrap in HTML
+                formatted_total = "KES {:,.2f}".format(total)
+                return format_html('<strong>{}</strong>', formatted_total)
+            return format_html('<strong>KES 0.00</strong>')
+        except (AttributeError, TypeError, ValueError):
+            return format_html('<strong>KES 0.00</strong>')
     revenue.short_description = 'Revenue'
-
 
 @admin.register(Seat)
 class SeatAdmin(admin.ModelAdmin):
