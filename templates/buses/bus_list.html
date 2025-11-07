@@ -1,0 +1,218 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}All Buses - Bus Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bus-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .bus-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    .bus-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+    }
+    
+    .status-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+    }
+    
+    .amenity-icon {
+        font-size: 1.2rem;
+        margin: 0 0.25rem;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .bus-image {
+        height: 200px;
+        object-fit: cover;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .operator-logo {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        border-radius: 4px;
+        background: white;
+        padding: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-bus-front"></i> All Buses</h2>
+        <a href="{% url 'bus_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add New Bus
+        </a>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Bus name or registration..." 
+                           value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Operator</label>
+                    <select name="operator" class="form-select">
+                        <option value="">All Operators</option>
+                        {% for operator in operators %}
+                        <option value="{{ operator.id }}" {% if selected_operator == operator.id|stringformat:"s" %}selected{% endif %}>
+                            {{ operator.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Bus Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for value, label in bus_types %}
+                        <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All</option>
+                        <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Buses Grid -->
+    {% if buses %}
+    <div class="row g-4">
+        {% for bus in buses %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card bus-card h-100">
+                {% if bus.is_active %}
+                <span class="badge bg-success status-badge">Active</span>
+                {% else %}
+                <span class="badge bg-secondary status-badge">Inactive</span>
+                {% endif %}
+                
+                <div class="bus-image card-img-top d-flex align-items-center justify-content-center text-white">
+                    <div class="text-center">
+                        <i class="bi bi-bus-front" style="font-size: 4rem;"></i>
+                        <p class="mb-0 mt-2 fs-5">{{ bus.registration_number }}</p>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-2">
+                        {% if bus.operator.logo %}
+                        <img src="{{ bus.operator.logo.url }}" alt="{{ bus.operator.name }}" class="operator-logo me-2">
+                        {% endif %}
+                        <div>
+                            <h5 class="card-title mb-1">{{ bus.bus_name }}</h5>
+                            <small class="text-muted">{{ bus.operator.name }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <span class="bus-type-badge bg-primary text-white">
+                            {{ bus.get_bus_type_display }}
+                        </span>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-grid-3x3"></i> {{ bus.seat_layout.total_seats }} seats
+                        </span>
+                    </div>
+                    
+                    {% if bus.rating > 0 %}
+                    <div class="rating-stars mb-2">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= bus.rating %}
+                            <i class="bi bi-star-fill"></i>
+                            {% else %}
+                            <i class="bi bi-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                        <span class="text-muted small">({{ bus.total_ratings }})</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if bus.amenities.exists %}
+                    <div class="amenity-icons mb-3">
+                        {% for amenity in bus.amenities.all|slice:":5" %}
+                        <span class="amenity-icon" title="{{ amenity.name }}">{{ amenity.icon }}</span>
+                        {% endfor %}
+                        {% if bus.amenities.count > 5 %}
+                        <small class="text-muted">+{{ bus.amenities.count|add:"-5" }} more</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer bg-transparent border-top-0">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'bus_detail' bus.pk %}" class="btn btn-sm btn-outline-primary flex-fill">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        <a href="{% url 'bus_edit' bus.pk %}" class="btn btn-sm btn-outline-secondary flex-fill">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-info-circle"></i> No buses found. 
+        <a href="{% url 'bus_add' %}">Add your first bus</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form on filter change
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', () => {
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>
+{% endblock %}

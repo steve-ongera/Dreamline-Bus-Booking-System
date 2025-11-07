@@ -1,0 +1,331 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .amenity-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .amenity-checkbox {
+        border: 2px solid #dee2e6;
+        padding: 1rem;
+        border-radius: 8px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    
+    .amenity-checkbox:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    .amenity-checkbox input:checked ~ label {
+        color: #007bff;
+        font-weight: 600;
+    }
+    
+    .amenity-checkbox input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .amenity-icon {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+    
+    .layout-preview {
+        border: 2px dashed #dee2e6;
+        padding: 2rem;
+        border-radius: 8px;
+        text-align: center;
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .layout-info {
+        background: #e7f3ff;
+        padding: 1rem;
+        border-radius: 6px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .btn-save {
+        min-width: 150px;
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .required-field::after {
+        content: "*";
+        color: #dc3545;
+        margin-left: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="form-container">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="{% if bus %}{% url 'bus_detail' bus.pk %}{% else %}{% url 'bus_list' %}{% endif %}" 
+                   class="btn btn-outline-secondary btn-sm mb-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+                <h2><i class="bi bi-bus-front"></i> {{ title }}</h2>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Display form errors -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Basic Information Section -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="bi bi-info-circle"></i> Basic Information
+                </h3>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.operator.id_for_label }}" class="form-label required-field">
+                            Bus Operator
+                        </label>
+                        {{ form.operator }}
+                        {% if form.operator.errors %}
+                        <div class="text-danger small">{{ form.operator.errors }}</div>
+                        {% endif %}
+                        <div class="form-help">Select the company operating this bus</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.bus_type.id_for_label }}" class="form-label required-field">
+                            Bus Type
+                        </label>
+                        {{ form.bus_type }}
+                        {% if form.bus_type.errors %}
+                        <div class="text-danger small">{{ form.bus_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.bus_name.id_for_label }}" class="form-label required-field">
+                            Bus Name
+                        </label>
+                        {{ form.bus_name }}
+                        {% if form.bus_name.errors %}
+                        <div class="text-danger small">{{ form.bus_name.errors }}</div>
+                        {% endif %}
+                        <div class="form-help">e.g., "Makarios Express X13"</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.registration_number.id_for_label }}" class="form-label required-field">
+                            Registration Number
+                        </label>
+                        {{ form.registration_number }}
+                        {% if form.registration_number.errors %}
+                        <div class="text-danger small">{{ form.registration_number.errors }}</div>
+                        {% endif %}
+                        <div class="form-help">e.g., "KCA 123X"</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seat Layout Section -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="bi bi-grid-3x3"></i> Seat Configuration
+                </h3>
+                
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="{{ form.seat_layout.id_for_label }}" class="form-label required-field">
+                            Seat Layout
+                        </label>
+                        {{ form.seat_layout }}
+                        {% if form.seat_layout.errors %}
+                        <div class="text-danger small">{{ form.seat_layout.errors }}</div>
+                        {% endif %}
+                        <div class="form-help">
+                            Choose the seating arrangement for this bus. 
+                            <a href="{% url 'layout_list' %}" target="_blank">View all layouts</a>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div id="layoutPreview" class="layout-preview">
+                            <p class="text-muted">
+                                <i class="bi bi-info-circle"></i> 
+                                Select a seat layout to see preview
+                            </p>
+                        </div>
+                        <div id="layoutInfo" class="layout-info mt-3" style="display: none;">
+                            <strong>Layout Details:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Total Seats: <span id="totalSeats">-</span></li>
+                                <li>Rows: <span id="totalRows">-</span></li>
+                                <li>Seats per Row: <span id="seatsPerRow">-</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amenities Section -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="bi bi-stars"></i> Bus Amenities
+                </h3>
+                
+                {% if form.amenities %}
+                <div class="amenity-grid">
+                    {% for checkbox in form.amenities %}
+                    <div class="amenity-checkbox">
+                        <div class="form-check">
+                            {{ checkbox.tag }}
+                            <label class="form-check-label w-100" for="{{ checkbox.id_for_label }}">
+                                <span class="d-flex align-items-center">
+                                    <span class="amenity-icon">
+                                        {% if 'WiFi' in checkbox.choice_label %}📶
+                                        {% elif 'AC' in checkbox.choice_label or 'Air' in checkbox.choice_label %}❄️
+                                        {% elif 'TV' in checkbox.choice_label %}📺
+                                        {% elif 'USB' in checkbox.choice_label %}🔌
+                                        {% elif 'Reclining' in checkbox.choice_label %}🪑
+                                        {% else %}✨{% endif %}
+                                    </span>
+                                    {{ checkbox.choice_label }}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No amenities available. Add amenities in the admin panel first.</p>
+                {% endif %}
+                
+                {% if form.amenities.errors %}
+                <div class="text-danger small mt-2">{{ form.amenities.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Status Section -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="bi bi-toggle-on"></i> Status
+                </h3>
+                
+                <div class="form-check form-switch">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                        Bus is Active (Available for scheduling trips)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{% if bus %}{% url 'bus_detail' bus.pk %}{% else %}{% url 'bus_list' %}{% endif %}" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary btn-save">
+                    <i class="bi bi-check-circle"></i> 
+                    {% if bus %}Update Bus{% else %}Add Bus{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Layout preview functionality
+    const layoutSelect = document.getElementById('{{ form.seat_layout.id_for_label }}');
+    const layoutPreview = document.getElementById('layoutPreview');
+    const layoutInfo = document.getElementById('layoutInfo');
+    
+    layoutSelect.addEventListener('change', async function() {
+        const layoutId = this.value;
+        
+        if (!layoutId) {
+            layoutPreview.innerHTML = '<p class="text-muted"><i class="bi bi-info-circle"></i> Select a seat layout to see preview</p>';
+            layoutInfo.style.display = 'none';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/buses/layout/${layoutId}/preview/`);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update layout info
+                document.getElementById('totalSeats').textContent = data.total_seats;
+                document.getElementById('totalRows').textContent = data.layout.rows ? data.layout.rows.length : '-';
+                document.getElementById('seatsPerRow').textContent = data.layout.rows && data.layout.rows[0] 
+                    ? data.layout.rows[0].seats.length : '-';
+                layoutInfo.style.display = 'block';
+                
+                // Update preview
+                layoutPreview.innerHTML = `
+                    <div>
+                        <i class="bi bi-grid-3x3 text-primary" style="font-size: 3rem;"></i>
+                        <p class="mt-2 mb-0"><strong>${data.name}</strong></p>
+                        <p class="text-muted">${data.total_seats} seats</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading layout preview:', error);
+            layoutPreview.innerHTML = '<p class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error loading preview</p>';
+        }
+    });
+    
+    // Trigger on page load if layout is already selected
+    if (layoutSelect.value) {
+        layoutSelect.dispatchEvent(new Event('change'));
+    }
+</script>
+{% endblock %}

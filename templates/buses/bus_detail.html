@@ -1,0 +1,342 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}{{ bus.bus_name }} - Bus Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .seat-layout-container {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 12px;
+        margin: 2rem 0;
+    }
+    
+    .seat {
+        width: 45px;
+        height: 45px;
+        margin: 4px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid;
+    }
+    
+    .seat.vip {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        border-color: #FF8C00;
+        color: #fff;
+    }
+    
+    .seat.business {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #5568d3;
+        color: #fff;
+    }
+    
+    .seat.normal {
+        background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+        border-color: #2D9CDB;
+        color: #fff;
+    }
+    
+    .seat:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .seat-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 8px 0;
+    }
+    
+    .seat-aisle {
+        width: 30px;
+        display: inline-block;
+    }
+    
+    .driver-seat {
+        width: 50px;
+        height: 50px;
+        background: #343a40;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin: 10px;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .legend-box {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        margin-right: 0.5rem;
+        border: 2px solid;
+    }
+    
+    .info-card {
+        border-left: 4px solid #007bff;
+    }
+    
+    .amenity-badge {
+        background: #e9ecef;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        margin: 0.25rem;
+    }
+    
+    .amenity-badge i {
+        margin-right: 0.5rem;
+        font-size: 1.2rem;
+    }
+    
+    .review-card {
+        border-left: 3px solid #ffc107;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'bus_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left"></i> Back to Buses
+            </a>
+            <h2><i class="bi bi-bus-front"></i> {{ bus.bus_name }}</h2>
+            <p class="text-muted">{{ bus.registration_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'bus_edit' bus.pk %}" class="btn btn-primary me-2">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <form method="post" action="{% url 'bus_toggle_status' bus.pk %}" class="d-inline">
+                {% csrf_token %}
+                {% if bus.is_active %}
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Deactivate this bus?')">
+                    <i class="bi bi-pause-circle"></i> Deactivate
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-play-circle"></i> Activate
+                </button>
+                {% endif %}
+            </form>
+            <form method="post" action="{% url 'bus_delete' bus.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this bus?')">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Info -->
+        <div class="col-lg-4">
+            <!-- Basic Info -->
+            <div class="card info-card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle"></i> Basic Information</h5>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Operator:</th>
+                            <td><a href="{% url 'operator_detail' bus.operator.pk %}">{{ bus.operator.name }}</a></td>
+                        </tr>
+                        <tr>
+                            <th>Type:</th>
+                            <td><span class="badge bg-primary">{{ bus.get_bus_type_display }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if bus.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Seat Layout:</th>
+                            <td><a href="{% url 'layout_detail' bus.seat_layout.pk %}">{{ bus.seat_layout.name }}</a></td>
+                        </tr>
+                        <tr>
+                            <th>Total Seats:</th>
+                            <td><strong>{{ bus.seat_layout.total_seats }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Rating:</th>
+                            <td>
+                                <div class="rating-stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= bus.rating %}
+                                        <i class="bi bi-star-fill"></i>
+                                        {% else %}
+                                        <i class="bi bi-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span class="text-muted small">({{ bus.total_ratings }} reviews)</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Upcoming Trips:</th>
+                            <td><strong>{{ upcoming_trips }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Amenities -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-stars"></i> Amenities</h5>
+                    {% if bus.amenities.exists %}
+                        {% for amenity in bus.amenities.all %}
+                        <div class="amenity-badge">
+                            <span>{{ amenity.icon }}</span>
+                            <span>{{ amenity.name }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No amenities listed</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Reviews -->
+            {% if recent_reviews %}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-chat-quote"></i> Recent Reviews</h5>
+                    {% for review in recent_reviews %}
+                    <div class="review-card card mb-2">
+                        <div class="card-body p-2">
+                            <div class="rating-stars small">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <p class="mb-1 small">{{ review.comment|truncatewords:15 }}</p>
+                            <small class="text-muted">{{ review.created_at|date:"M d, Y" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Seat Layout -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-grid-3x3"></i> Seat Layout Visualization</h5>
+                    
+                    <!-- Legend -->
+                    <div class="mb-4">
+                        <div class="legend-item">
+                            <div class="legend-box vip"></div>
+                            <span>VIP</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box business"></div>
+                            <span>Business</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box normal"></div>
+                            <span>Normal/Economy</span>
+                        </div>
+                    </div>
+
+                    <!-- Seat Layout -->
+                    <div class="seat-layout-container">
+                        <div class="text-center mb-3">
+                            <div class="driver-seat">
+                                <i class="bi bi-steering-wheel"></i>
+                            </div>
+                            <div><small class="text-muted">Driver</small></div>
+                        </div>
+                        
+                        <div id="seatLayout"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Seat layout configuration from Django
+    const layoutConfig = {{ layout_config|safe }};
+    const layoutContainer = document.getElementById('seatLayout');
+
+    // Render seat layout
+    function renderSeatLayout() {
+        if (!layoutConfig || !layoutConfig.rows) {
+            layoutContainer.innerHTML = '<p class="text-muted">No seat layout configuration available</p>';
+            return;
+        }
+
+        layoutConfig.rows.forEach(row => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'seat-row';
+            
+            // Add row number
+            const rowNumber = document.createElement('span');
+            rowNumber.className = 'me-2 text-muted';
+            rowNumber.textContent = `Row ${row.row}`;
+            rowDiv.appendChild(rowNumber);
+
+            row.seats.forEach((seat, index) => {
+                // Add aisle space if needed (typically after 2nd seat)
+                if (index === 2) {
+                    const aisle = document.createElement('div');
+                    aisle.className = 'seat-aisle';
+                    rowDiv.appendChild(aisle);
+                }
+
+                const seatDiv = document.createElement('div');
+                seatDiv.className = `seat ${seat.class || 'normal'}`;
+                seatDiv.textContent = `${row.row}${seat.position}`;
+                seatDiv.title = `Seat ${row.row}${seat.position} - ${seat.class || 'normal'} - ${seat.type}`;
+                
+                rowDiv.appendChild(seatDiv);
+            });
+
+            layoutContainer.appendChild(rowDiv);
+        });
+    }
+
+    renderSeatLayout();
+</script>
+{% endblock %}

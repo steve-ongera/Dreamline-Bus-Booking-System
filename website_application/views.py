@@ -813,3 +813,318 @@ def admin_dashboard(request):
     }
     
     return render(request, 'admin/dashboard.html', context)
+
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Q, Count, Avg
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .models import Bus, BusOperator, SeatLayout, Amenity
+from .forms import BusForm, BusOperatorForm, SeatLayoutForm
+import json
+
+
+# ============= BUS VIEWS =============
+
+def bus_list(request):
+    """Display all buses with filters"""
+    buses = Bus.objects.select_related('operator', 'seat_layout').prefetch_related('amenities')
+    
+    # Filters
+    search = request.GET.get('search', '')
+    operator_id = request.GET.get('operator', '')
+    bus_type = request.GET.get('type', '')
+    status = request.GET.get('status', '')
+    
+    if search:
+        buses = buses.filter(
+            Q(bus_name__icontains=search) | 
+            Q(registration_number__icontains=search)
+        )
+    
+    if operator_id:
+        buses = buses.filter(operator_id=operator_id)
+    
+    if bus_type:
+        buses = buses.filter(bus_type=bus_type)
+    
+    if status == 'active':
+        buses = buses.filter(is_active=True)
+    elif status == 'inactive':
+        buses = buses.filter(is_active=False)
+    
+    buses = buses.order_by('-created_at')
+    
+    # Get all operators for filter dropdown
+    operators = BusOperator.objects.filter(is_active=True)
+    
+    context = {
+        'buses': buses,
+        'operators': operators,
+        'search': search,
+        'selected_operator': operator_id,
+        'selected_type': bus_type,
+        'selected_status': status,
+        'bus_types': Bus.BUS_TYPE_CHOICES,
+    }
+    
+    return render(request, 'buses/bus_list.html', context)
+
+
+def bus_detail(request, pk):
+    """Display detailed bus information with seat layout visualization"""
+    bus = get_object_or_404(
+        Bus.objects.select_related('operator', 'seat_layout').prefetch_related('amenities'),
+        pk=pk
+    )
+    
+    # Get seat layout configuration
+    layout_config = bus.seat_layout.layout_config
+    
+    # Get upcoming trips count
+    from django.utils import timezone
+    upcoming_trips = bus.trips.filter(
+        departure_date__gte=timezone.now().date(),
+        is_active=True
+    ).count()
+    
+    # Get recent reviews
+    recent_reviews = bus.reviews.select_related('booking').order_by('-created_at')[:5]
+    
+    context = {
+        'bus': bus,
+        'layout_config': json.dumps(layout_config),
+        'upcoming_trips': upcoming_trips,
+        'recent_reviews': recent_reviews,
+    }
+    
+    return render(request, 'buses/bus_detail.html', context)
+
+
+def bus_form(request, pk=None):
+    """Add or edit bus"""
+    if pk:
+        bus = get_object_or_404(Bus, pk=pk)
+        title = f"Edit Bus: {bus.bus_name}"
+    else:
+        bus = None
+        title = "Add New Bus"
+    
+    if request.method == 'POST':
+        form = BusForm(request.POST, instance=bus)
+        if form.is_valid():
+            bus = form.save()
+            messages.success(request, f"Bus '{bus.bus_name}' saved successfully!")
+            return redirect('bus_detail', pk=bus.pk)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = BusForm(instance=bus)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'bus': bus,
+    }
+    
+    return render(request, 'buses/bus_form.html', context)
+
+
+@require_POST
+def bus_delete(request, pk):
+    """Delete bus"""
+    bus = get_object_or_404(Bus, pk=pk)
+    bus_name = bus.bus_name
+    
+    # Check if bus has any trips
+    if bus.trips.exists():
+        messages.error(request, f"Cannot delete '{bus_name}' because it has associated trips.")
+    else:
+        bus.delete()
+        messages.success(request, f"Bus '{bus_name}' deleted successfully!")
+    
+    return redirect('bus_list')
+
+
+@require_POST
+def bus_toggle_status(request, pk):
+    """Toggle bus active status"""
+    bus = get_object_or_404(Bus, pk=pk)
+    bus.is_active = not bus.is_active
+    bus.save()
+    
+    status = "activated" if bus.is_active else "deactivated"
+    messages.success(request, f"Bus '{bus.bus_name}' {status} successfully!")
+    
+    return redirect('bus_detail', pk=pk)
+
+
+# ============= BUS OPERATOR VIEWS =============
+
+def operator_list(request):
+    """Display all bus operators"""
+    operators = BusOperator.objects.annotate(
+        bus_count=Count('buses')
+    ).order_by('-created_at')
+    
+    search = request.GET.get('search', '')
+    if search:
+        operators = operators.filter(
+            Q(name__icontains=search) | 
+            Q(contact_email__icontains=search)
+        )
+    
+    context = {
+        'operators': operators,
+        'search': search,
+    }
+    
+    return render(request, 'buses/operator_list.html', context)
+
+
+def operator_detail(request, pk):
+    """Display operator details and their buses"""
+    operator = get_object_or_404(BusOperator, pk=pk)
+    buses = operator.buses.select_related('seat_layout').prefetch_related('amenities')
+    
+    context = {
+        'operator': operator,
+        'buses': buses,
+    }
+    
+    return render(request, 'buses/operator_detail.html', context)
+
+
+def operator_form(request, pk=None):
+    """Add or edit operator"""
+    if pk:
+        operator = get_object_or_404(BusOperator, pk=pk)
+        title = f"Edit Operator: {operator.name}"
+    else:
+        operator = None
+        title = "Add New Operator"
+    
+    if request.method == 'POST':
+        form = BusOperatorForm(request.POST, request.FILES, instance=operator)
+        if form.is_valid():
+            operator = form.save()
+            messages.success(request, f"Operator '{operator.name}' saved successfully!")
+            return redirect('operator_detail', pk=operator.pk)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = BusOperatorForm(instance=operator)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'operator': operator,
+    }
+    
+    return render(request, 'buses/operator_form.html', context)
+
+
+@require_POST
+def operator_delete(request, pk):
+    """Delete operator"""
+    operator = get_object_or_404(BusOperator, pk=pk)
+    operator_name = operator.name
+    
+    if operator.buses.exists():
+        messages.error(request, f"Cannot delete '{operator_name}' because it has associated buses.")
+    else:
+        operator.delete()
+        messages.success(request, f"Operator '{operator_name}' deleted successfully!")
+    
+    return redirect('operator_list')
+
+
+# ============= SEAT LAYOUT VIEWS =============
+
+def layout_list(request):
+    """Display all seat layouts"""
+    layouts = SeatLayout.objects.annotate(
+        bus_count=Count('bus')
+    ).order_by('-id')
+    
+    context = {
+        'layouts': layouts,
+    }
+    
+    return render(request, 'buses/layout_list.html', context)
+
+
+def layout_detail(request, pk):
+    """Display seat layout with visualization"""
+    layout = get_object_or_404(SeatLayout, pk=pk)
+    
+    # Get buses using this layout
+    buses = layout.bus_set.select_related('operator')
+    
+    context = {
+        'layout': layout,
+        'layout_config': json.dumps(layout.layout_config),
+        'buses': buses,
+    }
+    
+    return render(request, 'buses/layout_detail.html', context)
+
+
+def layout_form(request, pk=None):
+    """Add or edit seat layout"""
+    if pk:
+        layout = get_object_or_404(SeatLayout, pk=pk)
+        title = f"Edit Layout: {layout.name}"
+    else:
+        layout = None
+        title = "Add New Seat Layout"
+    
+    if request.method == 'POST':
+        form = SeatLayoutForm(request.POST, request.FILES, instance=layout)
+        if form.is_valid():
+            layout = form.save()
+            messages.success(request, f"Seat layout '{layout.name}' saved successfully!")
+            return redirect('layout_detail', pk=layout.pk)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = SeatLayoutForm(instance=layout)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'layout': layout,
+    }
+    
+    return render(request, 'buses/layout_form.html', context)
+
+
+@require_POST
+def layout_delete(request, pk):
+    """Delete seat layout"""
+    layout = get_object_or_404(SeatLayout, pk=pk)
+    layout_name = layout.name
+    
+    if layout.bus_set.exists():
+        messages.error(request, f"Cannot delete '{layout_name}' because it's being used by buses.")
+    else:
+        layout.delete()
+        messages.success(request, f"Seat layout '{layout_name}' deleted successfully!")
+    
+    return redirect('layout_list')
+
+
+# ============= AJAX/API VIEWS =============
+
+def get_layout_preview(request, pk):
+    """Get layout configuration for preview"""
+    layout = get_object_or_404(SeatLayout, pk=pk)
+    
+    return JsonResponse({
+        'success': True,
+        'layout': layout.layout_config,
+        'name': layout.name,
+        'total_seats': layout.total_seats,
+    })

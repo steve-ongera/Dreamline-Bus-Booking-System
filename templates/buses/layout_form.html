@@ -1,0 +1,905 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .layout-designer {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .designer-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .control-panel {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .canvas-area {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        min-height: 600px;
+    }
+    
+    .bus-canvas {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 2rem;
+        min-height: 500px;
+        position: relative;
+    }
+    
+    .driver-section {
+        text-align: center;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 3px solid #dee2e6;
+    }
+    
+    .driver-seat {
+        display: inline-block;
+        padding: 1rem 2rem;
+        background: #343a40;
+        color: white;
+        border-radius: 12px;
+        font-weight: bold;
+    }
+    
+    .seat-rows-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .seat-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px;
+        background: white;
+        border-radius: 8px;
+        position: relative;
+    }
+    
+    .row-controls {
+        position: absolute;
+        right: -35px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .row-controls button {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border-radius: 50%;
+        border: none;
+        background: #dc3545;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+    
+    .row-controls button:hover {
+        background: #c82333;
+    }
+    
+    .row-number {
+        min-width: 40px;
+        text-align: center;
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .seat {
+        width: 55px;
+        height: 55px;
+        border-radius: 10px 10px 4px 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        cursor: move;
+        transition: all 0.2s;
+        border: 3px solid;
+        position: relative;
+        user-select: none;
+    }
+    
+    .seat::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 35px;
+        height: 4px;
+        background: inherit;
+        border-radius: 3px 3px 0 0;
+    }
+    
+    .seat.vip {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        border-color: #FF8C00;
+        color: #fff;
+    }
+    
+    .seat.business {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #5568d3;
+        color: #fff;
+    }
+    
+    .seat.normal {
+        background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+        border-color: #2D9CDB;
+        color: #fff;
+    }
+    
+    .seat.dragging {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+    
+    .seat.drag-over {
+        border-style: dashed;
+        background: #e9ecef !important;
+    }
+    
+    .aisle {
+        width: 40px;
+        min-width: 40px;
+        height: 55px;
+        position: relative;
+    }
+    
+    .aisle::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, transparent, #dee2e6 50%, transparent);
+    }
+    
+    .seat-template {
+        width: 50px;
+        height: 50px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        border: 2px solid;
+        font-weight: bold;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+    }
+    
+    .seat-template:hover {
+        transform: scale(1.05);
+    }
+    
+    .seat-template:active {
+        cursor: grabbing;
+    }
+    
+    .template-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .btn-add-row {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .stats-box {
+        background: #e7f3ff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+    
+    .stat-value {
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .door-position-selector {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .door-option {
+        padding: 0.75rem;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .door-option:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    .door-option.active {
+        border-color: #007bff;
+        background: #e7f3ff;
+        font-weight: bold;
+    }
+    
+    .empty-canvas {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        color: #6c757d;
+    }
+    
+    .empty-canvas i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .quick-layouts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .quick-layout-btn {
+        padding: 0.75rem;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        font-size: 0.875rem;
+    }
+    
+    .quick-layout-btn:hover {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    .context-menu {
+        position: fixed;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: none;
+        z-index: 1000;
+    }
+    
+    .context-menu.show {
+        display: block;
+    }
+    
+    .context-menu button {
+        display: block;
+        width: 100%;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .context-menu button:hover {
+        background: #f8f9fa;
+    }
+    
+    .context-menu button:first-child {
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .context-menu button:last-child {
+        border-radius: 0 0 8px 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="layout-designer">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="{% if layout %}{% url 'layout_detail' layout.pk %}{% else %}{% url 'layout_list' %}{% endif %}" 
+                   class="btn btn-outline-secondary btn-sm mb-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+                <h2><i class="bi bi-grid-3x3"></i> {{ title }}</h2>
+                <p class="text-muted">Drag and drop seats to design your bus layout</p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="layoutForm">
+            {% csrf_token %}
+            
+            <!-- Hidden fields for form data -->
+            <input type="hidden" name="name" id="id_name" value="{{ form.name.value|default:'' }}">
+            <input type="hidden" name="total_rows" id="id_total_rows" value="{{ form.total_rows.value|default:'0' }}">
+            <input type="hidden" name="seats_per_row" id="id_seats_per_row" value="{{ form.seats_per_row.value|default:'0' }}">
+            <input type="hidden" name="total_seats" id="id_total_seats" value="{{ form.total_seats.value|default:'0' }}">
+            <input type="hidden" name="layout_config_text" id="id_layout_config_text">
+            
+            <div class="designer-container">
+                <!-- Control Panel -->
+                <div class="control-panel">
+                    <!-- Basic Info -->
+                    <div class="mb-4">
+                        <h3 class="section-title">
+                            <i class="bi bi-info-circle"></i> Basic Info
+                        </h3>
+                        <div class="mb-3">
+                            <label class="form-label">Layout Name *</label>
+                            <input type="text" class="form-control" id="layoutName" 
+                                   placeholder="e.g., 2x2 Standard" required
+                                   value="{{ form.name.value|default:'' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Layout Image</label>
+                            {{ form.image }}
+                        </div>
+                    </div>
+
+                    <!-- Quick Layouts -->
+                    <div class="mb-4">
+                        <h3 class="section-title">
+                            <i class="bi bi-lightning"></i> Quick Layouts
+                        </h3>
+                        <div class="quick-layouts">
+                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x2', 12)">
+                                2x2<br><small>Standard</small>
+                            </button>
+                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x1', 10)">
+                                2x1<br><small>VIP</small>
+                            </button>
+                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('2x2', 15)">
+                                2x2<br><small>Luxury</small>
+                            </button>
+                            <button type="button" class="quick-layout-btn" onclick="createQuickLayout('1x1', 8)">
+                                1x1<br><small>Sleeper</small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Seat Templates -->
+                    <div class="mb-4">
+                        <h3 class="section-title">
+                            <i class="bi bi-plus-square"></i> Add Seats
+                        </h3>
+                        <div class="template-grid">
+                            <div class="seat-template vip" draggable="true" data-class="vip">
+                                VIP
+                            </div>
+                            <div class="seat-template business" draggable="true" data-class="business">
+                                BUS
+                            </div>
+                            <div class="seat-template normal" draggable="true" data-class="normal">
+                                NOR
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-add-row" onclick="addRow()">
+                            <i class="bi bi-plus-circle"></i> Add Row
+                        </button>
+                    </div>
+
+                    <!-- Door Position -->
+                    <div class="mb-4">
+                        <h3 class="section-title">
+                            <i class="bi bi-door-open"></i> Door Position
+                        </h3>
+                        <div class="door-position-selector">
+                            <div class="door-option active" data-position="front-left" onclick="selectDoorPosition(this)">
+                                Front Left
+                            </div>
+                            <div class="door-option" data-position="front-right" onclick="selectDoorPosition(this)">
+                                Front Right
+                            </div>
+                            <div class="door-option" data-position="rear-left" onclick="selectDoorPosition(this)">
+                                Rear Left
+                            </div>
+                            <div class="door-option" data-position="rear-right" onclick="selectDoorPosition(this)">
+                                Rear Right
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="stats-box">
+                        <h3 class="section-title">
+                            <i class="bi bi-bar-chart"></i> Statistics
+                        </h3>
+                        <div class="stat-item">
+                            <span>Total Rows:</span>
+                            <span class="stat-value" id="statRows">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Total Seats:</span>
+                            <span class="stat-value" id="statSeats">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>VIP Seats:</span>
+                            <span class="stat-value" id="statVIP">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Business:</span>
+                            <span class="stat-value" id="statBusiness">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Normal:</span>
+                            <span class="stat-value" id="statNormal">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-outline-danger flex-fill" onclick="clearLayout()">
+                            <i class="bi bi-trash"></i> Clear
+                        </button>
+                        <button type="submit" class="btn btn-primary flex-fill">
+                            <i class="bi bi-check-circle"></i> Save
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Area -->
+                <div class="canvas-area">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="mb-0"><i class="bi bi-brush"></i> Design Canvas</h3>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomOut()">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="zoomIn()">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bus-canvas" id="busCanvas">
+                        <div class="driver-section">
+                            <div class="driver-seat">
+                                <i class="bi bi-steering-wheel"></i> DRIVER
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-arrow-up"></i> Front of Bus
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="seat-rows-container" id="seatRowsContainer">
+                            <div class="empty-canvas">
+                                <i class="bi bi-cursor"></i>
+                                <h4>Start Designing</h4>
+                                <p>Drag seats from the left panel or use quick layouts</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu">
+    <button onclick="changeSeatClass('vip')">
+        <i class="bi bi-star-fill text-warning"></i> Change to VIP
+    </button>
+    <button onclick="changeSeatClass('business')">
+        <i class="bi bi-briefcase-fill text-primary"></i> Change to Business
+    </button>
+    <button onclick="changeSeatClass('normal')">
+        <i class="bi bi-person-fill text-info"></i> Change to Normal
+    </button>
+    <button onclick="deleteSeat()" class="text-danger">
+        <i class="bi bi-trash"></i> Delete Seat
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let layoutData = {
+    door_position: 'front-left',
+    rows: []
+};
+let draggedElement = null;
+let contextMenuTarget = null;
+let seatCounter = 0;
+
+// Initialize from existing layout
+{% if layout %}
+try {
+    const existingConfig = {{ layout.layout_config|safe }};
+    if (existingConfig && existingConfig.rows) {
+        layoutData = existingConfig;
+        renderLayout();
+    }
+} catch (e) {
+    console.error('Error loading existing layout:', e);
+}
+{% endif %}
+
+// Drag and drop for seat templates
+document.querySelectorAll('.seat-template').forEach(template => {
+    template.addEventListener('dragstart', (e) => {
+        draggedElement = e.target;
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('seatClass', e.target.dataset.class);
+    });
+});
+
+// Add row function
+function addRow() {
+    const rowNumber = layoutData.rows.length + 1;
+    layoutData.rows.push({
+        row: rowNumber,
+        seats: []
+    });
+    renderLayout();
+}
+
+// Quick layout creation
+function createQuickLayout(type, numRows) {
+    if (!confirm('This will replace the current layout. Continue?')) return;
+    
+    layoutData.rows = [];
+    const [left, right] = type.split('x').map(Number);
+    
+    for (let i = 1; i <= numRows; i++) {
+        const row = {
+            row: i,
+            seats: []
+        };
+        
+        // Left side seats
+        for (let j = 0; j < left; j++) {
+            row.seats.push({
+                position: String.fromCharCode(65 + j), // A, B, C...
+                type: j === 0 ? 'window' : 'aisle',
+                class: type === '2x1' ? 'vip' : (i <= 2 ? 'vip' : 'normal')
+            });
+        }
+        
+        // Right side seats
+        for (let j = 0; j < right; j++) {
+            row.seats.push({
+                position: String.fromCharCode(65 + left + j),
+                type: j === right - 1 ? 'window' : 'aisle',
+                class: type === '2x1' ? 'vip' : (i <= 2 ? 'business' : 'normal')
+            });
+        }
+        
+        layoutData.rows.push(row);
+    }
+    
+    renderLayout();
+}
+
+// Render layout
+function renderLayout() {
+    const container = document.getElementById('seatRowsContainer');
+    container.innerHTML = '';
+    
+    if (layoutData.rows.length === 0) {
+        container.innerHTML = `
+            <div class="empty-canvas">
+                <i class="bi bi-cursor"></i>
+                <h4>Start Designing</h4>
+                <p>Drag seats from the left panel or use quick layouts</p>
+            </div>
+        `;
+        updateStats();
+        return;
+    }
+    
+    layoutData.rows.forEach((row, rowIndex) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'seat-row';
+        rowDiv.dataset.rowIndex = rowIndex;
+        
+        // Allow dropping on row
+        rowDiv.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        rowDiv.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const seatClass = e.dataTransfer.getData('seatClass');
+            if (seatClass) {
+                addSeatToRow(rowIndex, seatClass);
+            }
+        });
+        
+        // Row number
+        const rowNum = document.createElement('div');
+        rowNum.className = 'row-number';
+        rowNum.textContent = row.row;
+        rowDiv.appendChild(rowNum);
+        
+        // Seats
+        row.seats.forEach((seat, seatIndex) => {
+            // Add aisle after 2nd seat
+            if (seatIndex === 2 && row.seats.length > 2) {
+                const aisle = document.createElement('div');
+                aisle.className = 'aisle';
+                rowDiv.appendChild(aisle);
+            }
+            
+            const seatDiv = document.createElement('div');
+            seatDiv.className = `seat ${seat.class || 'normal'}`;
+            seatDiv.textContent = `${row.row}${seat.position}`;
+            seatDiv.draggable = true;
+            seatDiv.dataset.rowIndex = rowIndex;
+            seatDiv.dataset.seatIndex = seatIndex;
+            
+            // Drag events for reordering
+            seatDiv.addEventListener('dragstart', (e) => {
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('rowIndex', rowIndex);
+                e.dataTransfer.setData('seatIndex', seatIndex);
+            });
+            
+            seatDiv.addEventListener('dragend', (e) => {
+                e.target.classList.remove('dragging');
+            });
+            
+            seatDiv.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.target.classList.add('drag-over');
+            });
+            
+            seatDiv.addEventListener('dragleave', (e) => {
+                e.target.classList.remove('drag-over');
+            });
+            
+            seatDiv.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.target.classList.remove('drag-over');
+                
+                const fromRow = parseInt(e.dataTransfer.getData('rowIndex'));
+                const fromSeat = parseInt(e.dataTransfer.getData('seatIndex'));
+                
+                if (!isNaN(fromRow) && !isNaN(fromSeat)) {
+                    // Swap seats
+                    const temp = layoutData.rows[fromRow].seats[fromSeat];
+                    layoutData.rows[fromRow].seats[fromSeat] = layoutData.rows[rowIndex].seats[seatIndex];
+                    layoutData.rows[rowIndex].seats[seatIndex] = temp;
+                    renderLayout();
+                }
+            });
+            
+            // Right-click context menu
+            seatDiv.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                contextMenuTarget = { rowIndex, seatIndex };
+                showContextMenu(e.pageX, e.pageY);
+            });
+            
+            rowDiv.appendChild(seatDiv);
+        });
+        
+        // Row controls
+        const controls = document.createElement('div');
+        controls.className = 'row-controls';
+        controls.innerHTML = `
+            <button type="button" title="Delete Row" onclick="deleteRow(${rowIndex})">
+                <i class="bi bi-x"></i>
+            </button>
+        `;
+        rowDiv.appendChild(controls);
+        
+        container.appendChild(rowDiv);
+    });
+    
+    updateStats();
+}
+
+// Add seat to row
+function addSeatToRow(rowIndex, seatClass) {
+    const row = layoutData.rows[rowIndex];
+    const nextPosition = String.fromCharCode(65 + row.seats.length);
+    
+    row.seats.push({
+        position: nextPosition,
+        type: row.seats.length % 2 === 0 ? 'window' : 'aisle',
+        class: seatClass
+    });
+    
+    renderLayout();
+}
+
+// Delete row
+function deleteRow(rowIndex) {
+    if (confirm('Delete this row?')) {
+        layoutData.rows.splice(rowIndex, 1);
+        // Renumber rows
+        layoutData.rows.forEach((row, i) => {
+            row.row = i + 1;
+        });
+        renderLayout();
+    }
+}
+
+// Context menu functions
+function showContextMenu(x, y) {
+    const menu = document.getElementById('contextMenu');
+    menu.classList.add('show');
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('contextMenu').classList.remove('show');
+});
+
+function changeSeatClass(newClass) {
+    if (contextMenuTarget) {
+        const { rowIndex, seatIndex } = contextMenuTarget;
+        layoutData.rows[rowIndex].seats[seatIndex].class = newClass;
+        renderLayout();
+    }
+}
+
+function deleteSeat() {
+    if (contextMenuTarget) {
+        const { rowIndex, seatIndex } = contextMenuTarget;
+        if (confirm('Delete this seat?')) {
+            layoutData.rows[rowIndex].seats.splice(seatIndex, 1);
+            renderLayout();
+        }
+    }
+}
+
+// Door position selector
+function selectDoorPosition(element) {
+    document.querySelectorAll('.door-option').forEach(opt => opt.classList.remove('active'));
+    element.classList.add('active');
+    layoutData.door_position = element.dataset.position;
+}
+
+// Clear layout
+function clearLayout() {
+    if (confirm('Clear entire layout?')) {
+        layoutData.rows = [];
+        renderLayout();
+    }
+}
+
+// Update statistics
+function updateStats() {
+    let totalSeats = 0;
+    let vipSeats = 0;
+    let businessSeats = 0;
+    let normalSeats = 0;
+    
+    layoutData.rows.forEach(row => {
+        row.seats.forEach(seat => {
+            totalSeats++;
+            if (seat.class === 'vip') vipSeats++;
+            else if (seat.class === 'business') businessSeats++;
+            else normalSeats++;
+        });
+    });
+    
+    document.getElementById('statRows').textContent = layoutData.rows.length;
+    document.getElementById('statSeats').textContent = totalSeats;
+    document.getElementById('statVIP').textContent = vipSeats;
+    document.getElementById('statBusiness').textContent = businessSeats;
+    document.getElementById('statNormal').textContent = normalSeats;
+}
+
+// Form submission
+document.getElementById('layoutForm').addEventListener('submit', function(e) {
+    // Update hidden fields
+    const name = document.getElementById('layoutName').value;
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter a layout name');
+        return;
+    }
+    
+    const totalSeats = parseInt(document.getElementById('statSeats').textContent);
+    const maxSeatsPerRow = Math.max(...layoutData.rows.map(r => r.seats.length), 0);
+    
+    document.getElementById('id_name').value = name;
+    document.getElementById('id_total_rows').value = layoutData.rows.length;
+    document.getElementById('id_seats_per_row').value = maxSeatsPerRow;
+    document.getElementById('id_total_seats').value = totalSeats;
+    document.getElementById('id_layout_config_text').value = JSON.stringify(layoutData, null, 2);
+});
+
+// Sync layout name
+document.getElementById('layoutName').addEventListener('input', function(e) {
+    document.getElementById('id_name').value = e.target.value;
+});
+
+// Zoom functions
+let zoomLevel = 1;
+function zoomIn() {
+    zoomLevel = Math.min(zoomLevel + 0.1, 1.5);
+    document.getElementById('busCanvas').style.transform = `scale(${zoomLevel})`;
+    document.getElementById('busCanvas').style.transformOrigin = 'top center';
+}
+
+function zoomOut() {
+    zoomLevel = Math.max(zoomLevel - 0.1, 0.5);
+    document.getElementById('busCanvas').style.transform = `scale(${zoomLevel})`;
+    document.getElementById('busCanvas').style.transformOrigin = 'top center';
+}
+
+// Initialize
+updateStats();
+
+</script>
+{% endblock %}
