@@ -5,17 +5,38 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --primary-color: #4361ee;
+        --primary-light: #eef2ff;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --gray-100: #f8f9fa;
+        --gray-200: #e9ecef;
+        --gray-500: #6c757d;
+        --gray-700: #495057;
+        --gray-900: #212529;
+        --border-radius: 8px;
+        --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        --transition: all 0.3s ease;
+    }
+
     .form-container {
-        max-width: 800px;
+        max-width: 1400px;
         margin: 0 auto;
     }
     
     .form-section {
         background: white;
         padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
         margin-bottom: 2rem;
+        transition: var(--transition);
+    }
+    
+    .form-section:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     }
     
     .section-title {
@@ -23,75 +44,259 @@
         font-weight: 600;
         margin-bottom: 1.5rem;
         padding-bottom: 0.75rem;
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--gray-900);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .section-title i {
+        color: var(--primary-color);
     }
     
     .amenity-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 1rem;
     }
     
     .amenity-checkbox {
-        border: 2px solid #dee2e6;
-        padding: 1rem;
-        border-radius: 8px;
-        transition: all 0.2s;
+        border: 1px solid var(--gray-200);
+        padding: 1.25rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
         cursor: pointer;
+        background: white;
     }
     
     .amenity-checkbox:hover {
-        border-color: #007bff;
-        background: #f8f9fa;
+        border-color: var(--primary-color);
+        background: var(--primary-light);
+        transform: translateY(-2px);
+    }
+    
+    .amenity-checkbox.checked {
+        border-color: var(--primary-color);
+        background: var(--primary-light);
+        box-shadow: 0 2px 8px rgba(67, 97, 238, 0.15);
     }
     
     .amenity-checkbox input:checked ~ label {
-        color: #007bff;
+        color: var(--primary-color);
         font-weight: 600;
     }
     
     .amenity-checkbox input:checked {
-        background-color: #007bff;
-        border-color: #007bff;
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
     }
     
     .amenity-icon {
         font-size: 1.5rem;
         margin-right: 0.5rem;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: var(--primary-light);
+        color: var(--primary-color);
     }
     
     .layout-preview {
-        border: 2px dashed #dee2e6;
+        border: 2px dashed var(--gray-200);
         padding: 2rem;
-        border-radius: 8px;
+        border-radius: var(--border-radius);
         text-align: center;
-        min-height: 150px;
+        min-height: 180px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: var(--gray-100);
+        transition: var(--transition);
+    }
+    
+    .layout-preview.has-layout {
+        border-color: var(--primary-color);
+        background: var(--primary-light);
     }
     
     .layout-info {
-        background: #e7f3ff;
-        padding: 1rem;
-        border-radius: 6px;
-        border-left: 4px solid #007bff;
+        background: var(--primary-light);
+        padding: 1rem 1.25rem;
+        border-radius: var(--border-radius);
     }
     
     .btn-save {
         min-width: 150px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: var(--border-radius);
     }
     
     .form-help {
         font-size: 0.875rem;
-        color: #6c757d;
+        color: var(--gray-500);
         margin-top: 0.25rem;
     }
     
     .required-field::after {
         content: "*";
-        color: #dc3545;
+        color: var(--danger-color);
         margin-left: 0.25rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: var(--border-radius);
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--gray-200);
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .form-check-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+    }
+    
+    .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--gray-900);
+        margin: 0;
+    }
+    
+    .page-title i {
+        color: var(--primary-color);
+        font-size: 1.75rem;
+    }
+    
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        transition: var(--transition);
+    }
+    
+    .back-btn:hover {
+        background: var(--gray-100);
+        transform: translateX(-2px);
+    }
+    
+    .form-actions {
+        background: white;
+        padding: 1.5rem 2rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+    
+    .status-inactive {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+    
+    .layout-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .layout-detail-item {
+        text-align: center;
+        padding: 1rem;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .layout-detail-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.25rem;
+    }
+    
+    .layout-detail-label {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+    }
+    
+    @media (max-width: 768px) {
+        .form-container {
+            padding: 0 1rem;
+        }
+        
+        .form-section {
+            padding: 1.5rem;
+        }
+        
+        .amenity-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .header-actions {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .btn-save {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
@@ -100,23 +305,32 @@
 <div class="container-fluid py-4">
     <div class="form-container">
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="header-actions">
             <div>
                 <a href="{% if bus %}{% url 'bus_detail' bus.pk %}{% else %}{% url 'bus_list' %}{% endif %}" 
-                   class="btn btn-outline-secondary btn-sm mb-2">
-                    <i class="bi bi-arrow-left"></i> Back
+                   class="back-btn text-decoration-none">
+                    <i class="bi bi-arrow-left"></i> Back to {% if bus %}Bus Details{% else %}Bus List{% endif %}
                 </a>
-                <h2><i class="bi bi-bus-front"></i> {{ title }}</h2>
+                <h1 class="page-title mt-2">
+                    <i class="bi bi-bus-front"></i> {{ title }}
+                </h1>
             </div>
+            {% if bus %}
+            <div class="status-badge {% if bus.is_active %}status-active{% else %}status-inactive{% endif %}">
+                <i class="bi {% if bus.is_active %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
+                {% if bus.is_active %}Active{% else %}Inactive{% endif %}
+            </div>
+            {% endif %}
         </div>
 
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="busForm">
             {% csrf_token %}
             
             <!-- Display form errors -->
             {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {{ form.non_field_errors }}
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>{{ form.non_field_errors }}</div>
             </div>
             {% endif %}
 
@@ -133,7 +347,7 @@
                         </label>
                         {{ form.operator }}
                         {% if form.operator.errors %}
-                        <div class="text-danger small">{{ form.operator.errors }}</div>
+                        <div class="text-danger small mt-1">{{ form.operator.errors }}</div>
                         {% endif %}
                         <div class="form-help">Select the company operating this bus</div>
                     </div>
@@ -144,7 +358,7 @@
                         </label>
                         {{ form.bus_type }}
                         {% if form.bus_type.errors %}
-                        <div class="text-danger small">{{ form.bus_type.errors }}</div>
+                        <div class="text-danger small mt-1">{{ form.bus_type.errors }}</div>
                         {% endif %}
                     </div>
                     
@@ -154,7 +368,7 @@
                         </label>
                         {{ form.bus_name }}
                         {% if form.bus_name.errors %}
-                        <div class="text-danger small">{{ form.bus_name.errors }}</div>
+                        <div class="text-danger small mt-1">{{ form.bus_name.errors }}</div>
                         {% endif %}
                         <div class="form-help">e.g., "Makarios Express X13"</div>
                     </div>
@@ -165,7 +379,7 @@
                         </label>
                         {{ form.registration_number }}
                         {% if form.registration_number.errors %}
-                        <div class="text-danger small">{{ form.registration_number.errors }}</div>
+                        <div class="text-danger small mt-1">{{ form.registration_number.errors }}</div>
                         {% endif %}
                         <div class="form-help">e.g., "KCA 123X"</div>
                     </div>
@@ -185,28 +399,45 @@
                         </label>
                         {{ form.seat_layout }}
                         {% if form.seat_layout.errors %}
-                        <div class="text-danger small">{{ form.seat_layout.errors }}</div>
+                        <div class="text-danger small mt-1">{{ form.seat_layout.errors }}</div>
                         {% endif %}
                         <div class="form-help">
                             Choose the seating arrangement for this bus. 
-                            <a href="{% url 'layout_list' %}" target="_blank">View all layouts</a>
+                            <a href="{% url 'layout_list' %}" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-box-arrow-up-right"></i> View all layouts
+                            </a>
                         </div>
                     </div>
                     
                     <div class="col-12">
                         <div id="layoutPreview" class="layout-preview">
-                            <p class="text-muted">
-                                <i class="bi bi-info-circle"></i> 
-                                Select a seat layout to see preview
-                            </p>
+                            <div class="text-center">
+                                <i class="bi bi-grid-3x3 text-muted" style="font-size: 3rem;"></i>
+                                <p class="mt-3 mb-0 text-muted">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Select a seat layout to see preview
+                                </p>
+                            </div>
                         </div>
                         <div id="layoutInfo" class="layout-info mt-3" style="display: none;">
-                            <strong>Layout Details:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>Total Seats: <span id="totalSeats">-</span></li>
-                                <li>Rows: <span id="totalRows">-</span></li>
-                                <li>Seats per Row: <span id="seatsPerRow">-</span></li>
-                            </ul>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Layout Details</strong>
+                            </div>
+                            <div class="layout-details">
+                                <div class="layout-detail-item">
+                                    <div class="layout-detail-value" id="totalSeats">-</div>
+                                    <div class="layout-detail-label">Total Seats</div>
+                                </div>
+                                <div class="layout-detail-item">
+                                    <div class="layout-detail-value" id="totalRows">-</div>
+                                    <div class="layout-detail-label">Rows</div>
+                                </div>
+                                <div class="layout-detail-item">
+                                    <div class="layout-detail-value" id="seatsPerRow">-</div>
+                                    <div class="layout-detail-label">Seats/Row</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -221,18 +452,25 @@
                 {% if form.amenities %}
                 <div class="amenity-grid">
                     {% for checkbox in form.amenities %}
-                    <div class="amenity-checkbox">
-                        <div class="form-check">
+                    <div class="amenity-checkbox" id="amenity-{{ forloop.counter }}">
+                        <div class="form-check mb-0">
                             {{ checkbox.tag }}
-                            <label class="form-check-label w-100" for="{{ checkbox.id_for_label }}">
+                            <label class="form-check-label w-100 mb-0" for="{{ checkbox.id_for_label }}">
                                 <span class="d-flex align-items-center">
                                     <span class="amenity-icon">
-                                        {% if 'WiFi' in checkbox.choice_label %}📶
-                                        {% elif 'AC' in checkbox.choice_label or 'Air' in checkbox.choice_label %}❄️
-                                        {% elif 'TV' in checkbox.choice_label %}📺
-                                        {% elif 'USB' in checkbox.choice_label %}🔌
-                                        {% elif 'Reclining' in checkbox.choice_label %}🪑
-                                        {% else %}✨{% endif %}
+                                        {% if 'WiFi' in checkbox.choice_label %}
+                                        <i class="bi bi-wifi"></i>
+                                        {% elif 'AC' in checkbox.choice_label or 'Air' in checkbox.choice_label %}
+                                        <i class="bi bi-snow"></i>
+                                        {% elif 'TV' in checkbox.choice_label %}
+                                        <i class="bi bi-tv"></i>
+                                        {% elif 'USB' in checkbox.choice_label %}
+                                        <i class="bi bi-usb-plug"></i>
+                                        {% elif 'Reclining' in checkbox.choice_label %}
+                                        <i class="bi bi-arrows-angle-contract"></i>
+                                        {% else %}
+                                        <i class="bi bi-star"></i>
+                                        {% endif %}
                                     </span>
                                     {{ checkbox.choice_label }}
                                 </span>
@@ -242,7 +480,10 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-muted">No amenities available. Add amenities in the admin panel first.</p>
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <div>No amenities available. Add amenities in the admin panel first.</div>
+                </div>
                 {% endif %}
                 
                 {% if form.amenities.errors %}
@@ -256,22 +497,27 @@
                     <i class="bi bi-toggle-on"></i> Status
                 </h3>
                 
-                <div class="form-check form-switch">
-                    {{ form.is_active }}
-                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                <div class="form-check form-switch ps-0 d-flex align-items-center">
+                    <div class="me-3">
+                        {{ form.is_active }}
+                    </div>
+                    <label class="form-check-label ms-2 fw-medium" for="{{ form.is_active.id_for_label }}">
                         Bus is Active (Available for scheduling trips)
                     </label>
+                </div>
+                <div class="form-help mt-2">
+                    When active, this bus can be assigned to trips. Inactive buses won't appear in scheduling options.
                 </div>
             </div>
 
             <!-- Form Actions -->
-            <div class="d-flex gap-2 justify-content-end">
+            <div class="form-actions">
                 <a href="{% if bus %}{% url 'bus_detail' bus.pk %}{% else %}{% url 'bus_list' %}{% endif %}" 
-                   class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle"></i> Cancel
+                   class="btn btn-outline-secondary px-4">
+                    <i class="bi bi-x-circle me-1"></i> Cancel
                 </a>
                 <button type="submit" class="btn btn-primary btn-save">
-                    <i class="bi bi-check-circle"></i> 
+                    <i class="bi bi-check-circle me-1"></i> 
                     {% if bus %}Update Bus{% else %}Add Bus{% endif %}
                 </button>
             </div>
@@ -291,12 +537,31 @@
         const layoutId = this.value;
         
         if (!layoutId) {
-            layoutPreview.innerHTML = '<p class="text-muted"><i class="bi bi-info-circle"></i> Select a seat layout to see preview</p>';
+            layoutPreview.innerHTML = `
+                <div class="text-center">
+                    <i class="bi bi-grid-3x3 text-muted" style="font-size: 3rem;"></i>
+                    <p class="mt-3 mb-0 text-muted">
+                        <i class="bi bi-info-circle"></i> 
+                        Select a seat layout to see preview
+                    </p>
+                </div>
+            `;
+            layoutPreview.classList.remove('has-layout');
             layoutInfo.style.display = 'none';
             return;
         }
         
         try {
+            // Show loading state
+            layoutPreview.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 mb-0 text-muted">Loading layout preview...</p>
+                </div>
+            `;
+            
             const response = await fetch(`/buses/layout/${layoutId}/preview/`);
             const data = await response.json();
             
@@ -310,17 +575,65 @@
                 
                 // Update preview
                 layoutPreview.innerHTML = `
-                    <div>
+                    <div class="text-center">
                         <i class="bi bi-grid-3x3 text-primary" style="font-size: 3rem;"></i>
-                        <p class="mt-2 mb-0"><strong>${data.name}</strong></p>
-                        <p class="text-muted">${data.total_seats} seats</p>
+                        <p class="mt-3 mb-1"><strong>${data.name}</strong></p>
+                        <p class="text-muted mb-0">${data.total_seats} total seats</p>
                     </div>
                 `;
+                layoutPreview.classList.add('has-layout');
+            } else {
+                throw new Error('Failed to load layout data');
             }
         } catch (error) {
             console.error('Error loading layout preview:', error);
-            layoutPreview.innerHTML = '<p class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error loading preview</p>';
+            layoutPreview.innerHTML = `
+                <div class="text-center">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    <p class="mt-3 mb-0 text-danger">Error loading preview</p>
+                </div>
+            `;
+            layoutPreview.classList.remove('has-layout');
         }
+    });
+    
+    // Amenity checkbox styling
+    document.querySelectorAll('.amenity-checkbox').forEach(checkboxContainer => {
+        const checkbox = checkboxContainer.querySelector('input[type="checkbox"]');
+        
+        // Set initial state
+        if (checkbox.checked) {
+            checkboxContainer.classList.add('checked');
+        }
+        
+        // Update on change
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                checkboxContainer.classList.add('checked');
+            } else {
+                checkboxContainer.classList.remove('checked');
+            }
+        });
+    });
+    
+    // Form validation and submission feedback
+    const form = document.getElementById('busForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    form.addEventListener('submit', function() {
+        // Show loading state on button
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            {% if bus %}Updating...{% else %}Adding...{% endif %}
+        `;
+        submitBtn.disabled = true;
+        
+        // Revert after 5 seconds if something goes wrong
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 5000);
     });
     
     // Trigger on page load if layout is already selected
