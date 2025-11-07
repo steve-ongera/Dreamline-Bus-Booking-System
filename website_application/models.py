@@ -126,22 +126,101 @@ class Route(models.Model):
     def __str__(self):
         return f"{self.origin.name} → {self.destination.name}"
 
+import datetime
+from datetime import timedelta
 
 class RouteStop(models.Model):
-    """Intermediate stops along a route"""
+    """Intermediate stops along a route - ENHANCED VERSION"""
+    STOP_TYPE_CHOICES = [
+        ('regular', 'Regular Stop'),
+        ('food', 'Food/Rest Stop'),
+        ('fuel', 'Fuel Stop'),
+        ('emergency', 'Emergency Stop'),
+    ]
+    
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='stops')
     boarding_point = models.ForeignKey(BoardingPoint, on_delete=models.CASCADE)
     stop_order = models.IntegerField(help_text="Order of stop along the route")
     time_from_origin = models.DurationField(help_text="Time from origin to this stop")
-    is_pickup = models.BooleanField(default=True)
-    is_dropoff = models.BooleanField(default=True)
+    
+    # Stop capabilities
+    is_pickup = models.BooleanField(default=True, help_text="Passengers can board here")
+    is_dropoff = models.BooleanField(default=True, help_text="Passengers can alight here")
+    
+    # Special stop types
+    stop_type = models.CharField(
+        max_length=20, 
+        choices=STOP_TYPE_CHOICES, 
+        default='regular',
+        help_text="Type of stop"
+    )
+    is_food_stop = models.BooleanField(
+        default=False, 
+        help_text="This is a designated food/refreshment stop"
+    )
+    break_duration = models.DurationField(
+        null=True, 
+        blank=True,
+        help_text="Expected break duration at this stop (for food/rest stops)"
+    )
+    
+    # Additional stop information
+    notes = models.TextField(
+        blank=True,
+        help_text="Special instructions or notes for this stop"
+    )
+    facilities = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Available facilities at this stop (e.g., {'restroom': true, 'restaurant': true})"
+    )
+    
+    # Pricing adjustments (optional)
+    price_multiplier = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=1.00,
+        validators=[MinValueValidator(0.01)],
+        help_text="Price multiplier for this stop segment"
+    )
     
     class Meta:
         ordering = ['stop_order']
         unique_together = ['route', 'stop_order']
     
     def __str__(self):
-        return f"{self.route} - Stop {self.stop_order}: {self.boarding_point}"
+        stop_type_str = f" [{self.get_stop_type_display()}]" if self.stop_type != 'regular' else ""
+        return f"{self.route} - Stop {self.stop_order}: {self.boarding_point}{stop_type_str}"
+    
+    def is_origin(self):
+        """Check if this is the first stop (origin)"""
+        return self.stop_order == 1
+    
+    def is_destination(self):
+        """Check if this is the last stop (destination)"""
+        return self.route.stops.count() == self.stop_order
+    
+    def get_break_duration_minutes(self):
+        """Get break duration in minutes"""
+        if self.break_duration:
+            return int(self.break_duration.total_seconds() / 60)
+        return 0
+    
+    def save(self, *args, **kwargs):
+        # Auto-set pickup/dropoff for origin and destination
+        if self.is_origin():
+            self.is_pickup = True
+            self.is_dropoff = False
+        elif self.is_destination():
+            self.is_pickup = False
+            self.is_dropoff = True
+        
+        # If it's a food stop, ensure it has break duration
+        if self.is_food_stop and not self.break_duration:
+            self.break_duration = timedelta(minutes=30)
+        
+        super().save(*args, **kwargs)
+
 
 
 class Trip(models.Model):

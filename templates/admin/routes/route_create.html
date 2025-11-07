@@ -1,0 +1,1007 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Create New Route{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    
+    .section-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #343a40;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 0;
+    }
+    
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin: 0 auto 0.5rem;
+        transition: all 0.3s;
+    }
+    
+    .step.active .step-number {
+        background: #007bff;
+        color: white;
+        box-shadow: 0 0 0 4px rgba(0,123,255,0.2);
+    }
+    
+    .step.completed .step-number {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .step.active .step-label {
+        color: #007bff;
+        font-weight: 600;
+    }
+    
+    .route-preview {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .route-flow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .route-flow .arrow {
+        color: #007bff;
+        font-size: 2rem;
+    }
+    
+    .location-select-card {
+        border: 2px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        transition: all 0.3s;
+        cursor: pointer;
+        background: white;
+    }
+    
+    .location-select-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    
+    .location-select-card.selected {
+        border-color: #007bff;
+        background: linear-gradient(135deg, #e7f3ff 0%, #ffffff 100%);
+    }
+    
+    .location-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Stop Item Styles */
+    .stops-container {
+        position: relative;
+    }
+    
+    .stop-item {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        position: relative;
+        transition: all 0.3s;
+    }
+    
+    .stop-item:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+    }
+    
+    .stop-item.origin {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #f0fff4 0%, #f8f9fa 100%);
+    }
+    
+    .stop-item.destination {
+        border-color: #dc3545;
+        background: linear-gradient(135deg, #fff5f5 0%, #f8f9fa 100%);
+    }
+    
+    .stop-item.food-stop {
+        border-color: #ffc107;
+        background: linear-gradient(135deg, #fffbf0 0%, #f8f9fa 100%);
+    }
+    
+    .stop-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .stop-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #007bff;
+        min-width: 50px;
+    }
+    
+    .stop-item.origin .stop-number {
+        color: #28a745;
+    }
+    
+    .stop-item.destination .stop-number {
+        color: #dc3545;
+    }
+    
+    .stop-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .drag-handle {
+        cursor: move;
+        padding: 0.5rem;
+        color: #6c757d;
+    }
+    
+    .drag-handle:hover {
+        color: #007bff;
+    }
+    
+    .stop-type-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    
+    .stop-type-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .stop-type-badge.origin {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .stop-type-badge.destination {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .connection-line {
+        position: relative;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: -0.5rem 0;
+    }
+    
+    .connection-line::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, #dee2e6 0%, #007bff 50%, #dee2e6 100%);
+        transform: translateX(-50%);
+    }
+    
+    .connection-line .duration-badge {
+        background: white;
+        border: 2px solid #007bff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #007bff;
+        z-index: 1;
+    }
+    
+    .add-stop-btn {
+        width: 100%;
+        padding: 1rem;
+        border: 2px dashed #dee2e6;
+        background: white;
+        border-radius: 0.5rem;
+        color: #6c757d;
+        font-weight: 500;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .add-stop-btn:hover {
+        border-color: #007bff;
+        color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .custom-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        transition: background 0.2s;
+    }
+    
+    .custom-checkbox:hover {
+        background: #e9ecef;
+    }
+    
+    .custom-checkbox input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+    
+    .food-stop-info {
+        background: #fffbf0;
+        border: 1px solid #ffc107;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .time-input-group {
+        position: relative;
+    }
+    
+    .time-input-group .form-control {
+        padding-left: 2.5rem;
+    }
+    
+    .time-input-group i {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 5;
+    }
+    
+    .form-section {
+        display: none;
+    }
+    
+    .form-section.active {
+        display: block;
+        animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .navigation-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        background: white;
+        color: #495057;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .quick-action-btn:hover {
+        background: #f8f9fa;
+        border-color: #007bff;
+        color: #007bff;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    .alert-info {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        color: #004085;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-title">
+            <i class="bi bi-plus-circle"></i>
+            <span>Create New Route</span>
+        </div>
+        <p class="hero-subtitle mb-0">Set up a new bus route with boarding points, stops, and schedules</p>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step active" data-step="1">
+            <div class="step-number">1</div>
+            <div class="step-label">Route Details</div>
+        </div>
+        <div class="step" data-step="2">
+            <div class="step-number">2</div>
+            <div class="step-label">Configure Stops</div>
+        </div>
+        <div class="step" data-step="3">
+            <div class="step-number">3</div>
+            <div class="step-label">Review & Create</div>
+        </div>
+    </div>
+
+    <form method="post" id="routeCreateForm">
+        {% csrf_token %}
+        
+        <!-- Step 1: Route Details -->
+        <div class="form-section active" data-section="1">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="bi bi-signpost-split"></i>
+                            Select Origin and Destination
+                        </h3>
+                        
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Tip:</strong> Choose the starting and ending cities for this route. You'll add intermediate stops in the next step.
+                        </div>
+                        
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-geo-alt-fill text-success"></i> Origin (Starting Point)
+                                </label>
+                                <select class="form-select form-select-lg" id="origin" name="origin" required onchange="updateRoutePreview()">
+                                    <option value="">Select origin city...</option>
+                                    {% for location in all_locations %}
+                                    <option value="{{ location.id }}">{{ location.name }} ({{ location.county }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-geo-fill text-danger"></i> Destination (End Point)
+                                </label>
+                                <select class="form-select form-select-lg" id="destination" name="destination" required onchange="updateRoutePreview()">
+                                    <option value="">Select destination city...</option>
+                                    {% for location in all_locations %}
+                                    <option value="{{ location.id }}">{{ location.name }} ({{ location.county }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Route Preview -->
+                        <div id="routePreview" class="route-preview mt-4" style="display: none;">
+                            <div class="route-flow">
+                                <span id="originName">Origin</span>
+                                <span class="arrow"><i class="bi bi-arrow-right-circle-fill"></i></span>
+                                <span id="destinationName">Destination</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="bi bi-speedometer2"></i>
+                            Route Information
+                        </h3>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="distance" class="form-label">Distance (km) *</label>
+                                <input type="number" step="0.01" class="form-control" id="distance" 
+                                       name="distance_km" required min="1" placeholder="e.g., 150">
+                                <div class="help-text">
+                                    <i class="bi bi-info-circle"></i> Total route distance
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="duration_hours" class="form-label">Duration (Hours) *</label>
+                                <input type="number" step="0.5" class="form-control" id="duration_hours" 
+                                       name="duration_hours" required min="0.5" placeholder="e.g., 3.5">
+                                <div class="help-text">
+                                    <i class="bi bi-info-circle"></i> Estimated travel time
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Route Status</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="is_active" 
+                                           name="is_active" checked>
+                                    <label class="form-check-label" for="is_active">
+                                        <i class="bi bi-check-circle text-success"></i> Active (Bookable)
+                                    </label>
+                                </div>
+                                <div class="help-text">
+                                    Enable route for booking
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-actions mt-4">
+                            <button type="button" class="quick-action-btn" onclick="estimateFromDistance()">
+                                <i class="bi bi-calculator"></i> Auto-estimate duration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="bi bi-lightbulb"></i>
+                            Quick Tips
+                        </h3>
+                        
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item border-0 px-0">
+                                <strong>1. Choose Different Cities</strong>
+                                <p class="small text-muted mb-0">Origin and destination must be different locations</p>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <strong>2. Accurate Distance</strong>
+                                <p class="small text-muted mb-0">Enter the actual road distance, not straight-line distance</p>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <strong>3. Include Stops</strong>
+                                <p class="small text-muted mb-0">Factor in stops and traffic when estimating duration</p>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <strong>4. Multiple Stops</strong>
+                                <p class="small text-muted mb-0">You'll add intermediate pickup/dropoff points next</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Configure Stops -->
+        <div class="form-section" data-section="2">
+            <div class="row">
+                <div class="col-lg-9">
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="bi bi-signpost-2"></i>
+                            Configure Route Stops
+                            <small class="text-muted ms-2">(Drag to reorder)</small>
+                        </h3>
+                        
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Getting Started:</strong> Add at least 2 stops (origin and destination). You can add intermediate boarding points and food stops.
+                        </div>
+                        
+                        <div id="stopsContainer" class="stops-container">
+                            <!-- Stops will be added dynamically -->
+                        </div>
+                        
+                        <button type="button" class="add-stop-btn" onclick="addStop()">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Add Stop
+                        </button>
+                        
+                        <div class="quick-actions mt-3">
+                            <button type="button" class="quick-action-btn" onclick="addOriginDestination()">
+                                <i class="bi bi-lightning"></i> Quick Add: Origin & Destination
+                            </button>
+                            <button type="button" class="quick-action-btn" onclick="addIntermediateStop()">
+                                <i class="bi bi-plus"></i> Add Intermediate Stop
+                            </button>
+                            <button type="button" class="quick-action-btn" onclick="addFoodStop()">
+                                <i class="bi bi-cup-hot"></i> Add Food Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3">
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="bi bi-question-circle"></i>
+                            Stop Types
+                        </h3>
+                        
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item border-0 px-0">
+                                <strong><i class="bi bi-geo-alt-fill text-success"></i> Origin</strong>
+                                <p class="small text-muted mb-0">Starting point - pickup only</p>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <strong><i class="bi bi-geo-fill text-danger"></i> Destination</strong>
+                                <p class="small text-muted mb-0">End point - dropoff only</p>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <strong><i class="bi bi-signpost-2 text-primary"></i> Regular Stop</strong>
+                                <p class="small text-muted mb-0">Intermediate boarding points</p>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <strong><i class="bi bi-cup-hot text-warning"></i> Food Stop</strong>
+                                <p class="small text-muted mb-0">Rest & refreshment breaks</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="bi bi-pin-map"></i>
+                            Available Points
+                        </h3>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small">Filter by Location</label>
+                            <select class="form-select form-select-sm" id="locationFilter" onchange="filterBoardingPoints()">
+                                <option value="">All Locations</option>
+                                {% for location in all_locations %}
+                                <option value="{{ location.id }}">{{ location.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div id="availablePointsList" style="max-height: 400px; overflow-y: auto;">
+                            {% for point in all_boarding_points %}
+                            <div class="border rounded p-2 mb-2 small" data-location="{{ point.location.id }}">
+                                <strong>{{ point.name }}</strong>
+                                <div class="text-muted">
+                                    <i class="bi bi-geo-alt"></i> {{ point.location.name }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Review & Create -->
+        <div class="form-section" data-section="3">
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="bi bi-check-circle"></i>
+                    Review Route Details
+                </h3>
+                
+                <div id="reviewContent" class="row g-4">
+                    <!-- Review content will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="navigation-buttons">
+            <button type="button" class="btn btn-outline-secondary" id="prevBtn" onclick="changeStep(-1)" style="display: none;">
+                <i class="bi bi-arrow-left"></i> Previous
+            </button>
+            
+            <div class="ms-auto d-flex gap-2">
+                <a href="{% url 'route_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="button" class="btn btn-primary" id="nextBtn" onclick="changeStep(1)">
+                    Next <i class="bi bi-arrow-right"></i>
+                </button>
+                <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                    <i class="bi bi-check-circle"></i> Create Route
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let currentStep = 1;
+let stopCounter = 0;
+const boardingPoints = {{ boarding_points_json|safe }};
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateStepDisplay();
+});
+
+// Step Navigation
+function changeStep(direction) {
+    const newStep = currentStep + direction;
+    
+    // Validate current step before moving forward
+    if (direction > 0 && !validateStep(currentStep)) {
+        return;
+    }
+    
+    if (newStep >= 1 && newStep <= 3) {
+        currentStep = newStep;
+        updateStepDisplay();
+        
+        // If moving to review step, populate review content
+        if (currentStep === 3) {
+            populateReview();
+        }
+    }
+}
+
+function updateStepDisplay() {
+    // Update step indicators
+    document.querySelectorAll('.step').forEach(step => {
+        const stepNum = parseInt(step.dataset.step);
+        step.classList.remove('active', 'completed');
+        
+        if (stepNum === currentStep) {
+            step.classList.add('active');
+        } else if (stepNum < currentStep) {
+            step.classList.add('completed');
+        }
+    });
+    
+    // Update form sections
+    document.querySelectorAll('.form-section').forEach(section => {
+        section.classList.remove('active');
+        if (parseInt(section.dataset.section) === currentStep) {
+            section.classList.add('active');
+        }
+    });
+    
+    // Update navigation buttons
+    document.getElementById('prevBtn').style.display = currentStep > 1 ? 'block' : 'none';
+    document.getElementById('nextBtn').style.display = currentStep < 3 ? 'block' : 'none';
+    document.getElementById('submitBtn').style.display = currentStep === 3 ? 'block' : 'none';
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validateStep(step) {
+    if (step === 1) {
+        const origin = document.getElementById('origin').value;
+        const destination = document.getElementById('destination').value;
+        const distance = document.getElementById('distance').value;
+        const duration = document.getElementById('duration_hours').value;
+        
+        if (!origin || !destination) {
+            alert('Please select both origin and destination.');
+            return false;
+        }
+        
+        if (origin === destination) {
+            alert('Origin and destination must be different.');
+            return false;
+        }
+        
+        if (!distance || parseFloat(distance) <= 0) {
+            alert('Please enter a valid distance.');
+            return false;
+        }
+        
+        if (!duration || parseFloat(duration) <= 0) {
+            alert('Please enter a valid duration.');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    if (step === 2) {
+        const stops = document.querySelectorAll('.stop-item');
+        if (stops.length < 2) {
+            alert('Please add at least 2 stops (origin and destination).');
+            return false;
+        }
+        
+        // Check if all stops have boarding points selected
+        let hasError = false;
+        stops.forEach(stop => {
+            const select = stop.querySelector('select[name*="[boarding_point]"]');
+            const timeInput = stop.querySelector('input[name*="[time_from_origin]"]');
+            
+            if (!select.value) {
+                hasError = true;
+            }
+            if (!timeInput.value) {
+                hasError = true;
+            }
+        });
+        
+        if (hasError) {
+            alert('Please fill in all required fields for each stop.');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    return true;
+}
+
+// Route Preview
+function updateRoutePreview() {
+    const originSelect = document.getElementById('origin');
+    const destinationSelect = document.getElementById('destination');
+    const preview = document.getElementById('routePreview');
+    
+    if (originSelect.value && destinationSelect.value) {
+        document.getElementById('originName').textContent = originSelect.options[originSelect.selectedIndex].text.split(' (')[0];
+        document.getElementById('destinationName').textContent = destinationSelect.options[destinationSelect.selectedIndex].text.split(' (')[0];
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Auto-estimate duration
+function estimateFromDistance() {
+    const distance = parseFloat(document.getElementById('distance').value);
+    if (distance > 0) {
+        const avgSpeed = 60; // km/h
+        const estimatedHours = (distance / avgSpeed).toFixed(1);
+        document.getElementById('duration_hours').value = estimatedHours;
+        alert(`Estimated duration: ${estimatedHours} hours (based on ${avgSpeed} km/h average speed)`);
+    } else {
+        alert('Please enter distance first.');
+    }
+}
+
+// Stop Management Functions
+function addStop(config = {}) {
+    stopCounter++;
+    const container = document.getElementById('stopsContainer');
+    const stopDiv = document.createElement('div');
+    stopDiv.className = 'stop-item';
+    stopDiv.dataset.stopIndex = stopCounter;
+    stopDiv.innerHTML = generateStopHTML(stopCounter, config);
+    container.appendChild(stopDiv);
+    initializeStopEvents(stopDiv);
+    updateStopNumbers();
+}
+function generateStopHTML(index, config) {
+    const stopType = config.type || 'regular';
+    const isOrigin = stopType === 'origin';
+    const isDestination = stopType === 'destination';
+    const isFoodStop = stopType === 'food';
+    
+    let typeBadges = '';
+    if (isOrigin) {
+        typeBadges += `<div class="stop-type-badge origin"><i class="bi bi-geo-alt-fill"></i> Origin</div>`;
+    }
+    if (isDestination) {
+        typeBadges += `<div class="stop-type-badge destination"><i class="bi bi-geo-fill"></i> Destination</div>`;
+    }
+    if (isFoodStop) {
+        typeBadges += `<div class="stop-type-badge food-stop"><i class="bi bi-cup-hot"></i> Food Stop</div>`;
+    }
+    
+    return `
+        <div class="stop-header">
+            <div class="stop-number">#${index}</div>
+            <div class="stop-controls">
+                <span class="drag-handle" title="Drag to reorder"><i class="bi bi-arrows-move"></i></span>
+                <button type="button" class="btn btn-sm btn-danger ms-2" onclick="removeStop(this)">
+                    <i class="bi bi-trash"></i> Remove
+                </button>
+            </div>
+        </div>
+        <div class="stop-type-badges mb-3">
+            ${typeBadges}
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Boarding Point *</label>
+            <select class="form-select" name="stops[${index}][boarding_point]" required>
+                <option value="">Select boarding point...</option>
+                ${boardingPoints.map(point => `
+                    <option value="${point.id}" ${config.boarding_point == point.id ? 'selected' : ''}>
+                        ${point.name} (${point.location_name})
+                    </option>
+                `).join('')}
+            </select>
+        </div>
+        <div class="mb-3 time-input-group">
+            <label class="form-label fw-bold">Time from Origin *</label>
+            <i class="bi bi-clock"></i>
+            <input type="time" class="form-control" name="stops[${index}][time_from_origin]" required
+                   value="${config.time_from_origin || ''}">
+            <div class="help-text">
+                <i class="bi bi-info-circle"></i> Estimated time from route origin
+            </div>
+        </div>
+        ${isFoodStop ? `
+        <div class="food-stop-info">
+            <i class="bi bi-cup-hot-fill"></i>
+            This is a food stop. Passengers can take a break here.
+        </div>
+        ` : ''}
+    `;
+}
+function initializeStopEvents(stopDiv) {
+    // Initialize any event listeners for the stop here
+}
+function removeStop(button) {
+    const stopDiv = button.closest('.stop-item');
+    stopDiv.remove();
+    updateStopNumbers();
+}
+function updateStopNumbers() {
+    document.querySelectorAll('.stop-item').forEach((stop, idx) => {
+        stop.querySelector('.stop-number').textContent = `#${idx + 1}`;
+    });
+}
+function addOriginDestination() {
+    const originId = document.getElementById('origin').value;
+    const destinationId = document.getElementById('destination').value;
+    if (!originId || !destinationId) {
+        alert('Please select origin and destination first.');
+        return;
+    }
+    addStop({ type: 'origin', boarding_point: '', time_from_origin: '' });
+    addStop({ type: 'destination', boarding_point: '', time_from_origin: '' });
+}
+function addIntermediateStop() {
+    addStop({ type: 'regular', boarding_point: '', time_from_origin: '' });
+}
+function addFoodStop() {
+    addStop({ type: 'food', boarding_point: '', time_from_origin: '' });
+}
+// Filter Boarding Points
+function filterBoardingPoints() {
+    const filterValue = document.getElementById('locationFilter').value;
+    document.querySelectorAll('#availablePointsList > div').forEach(item => {
+        if (!filterValue || item.dataset.location === filterValue) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+// Populate Review Content
+function populateReview() {
+    const reviewDiv = document.getElementById('reviewContent');
+    reviewDiv.innerHTML = '';
+    
+    // Route Details
+    const originText = document.getElementById('origin').options[document.getElementById('origin').selectedIndex].text;
+    const destinationText = document.getElementById('destination').options[document.getElementById('destination').selectedIndex].text;
+    const distance = document.getElementById('distance').value;
+    const duration = document.getElementById('duration_hours').value;
+    const isActive = document.getElementById('is_active').checked ? 'Yes' : 'No';
+    
+    reviewDiv.innerHTML += `
+        <div class="col-md-6">
+            <h5>Route Overview</h5>
+            <p><strong>Origin:</strong> ${originText}</p>
+            <p><strong>Destination:</strong> ${destinationText}</p>
+            <p><strong>Distance:</strong> ${distance} km</p>
+            <p><strong>Duration:</strong> ${duration} hours</p>
+            <p><strong>Active:</strong> ${isActive}</p>
+        </div>
+    `;
+    
+    // Stops Overview
+    let stopsHTML = '<div class="col-md-6"><h5>Stops</h5><ul class="list-group">';
+    document.querySelectorAll('.stop-item').forEach((stop, idx) => {
+        const boardingPointSelect = stop.querySelector('select[name*="[boarding_point]"]');
+        const timeInput = stop.querySelector('input[name*="[time_from_origin]"]');
+        const stopType = stop.querySelector('.stop-type-badges').innerText.replace(/\s+/g, ' ').trim();
+        
+        stopsHTML += `
+            <li class="list-group-item">
+                <strong>Stop #${idx + 1} (${stopType}):</strong> ${boardingPointSelect.options[boardingPointSelect.selectedIndex].text} - Time from Origin: ${timeInput.value}
+            </li>
+        `;
+    });
+    stopsHTML += '</ul></div>';
+    reviewDiv.innerHTML += stopsHTML;
+}
+</script>
+{% endblock %}

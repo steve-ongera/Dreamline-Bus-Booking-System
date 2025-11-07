@@ -67,9 +67,13 @@ urlpatterns = [
     path('admin-payments/', views.payment_list, name='payment_list'),
     path('admin-payments/export/', views.export_payments, name='export_payments'),
 
-    # Routes
+    # Route Management
     path('routes/', views.route_list, name='route_list'),
     path('routes/<int:pk>/', views.route_detail, name='route_detail'),
+    path('routes/<int:pk>/edit/', views.route_edit, name='route_edit'),
+    path('routes/create/', views.route_create, name='route_create'),
+    path('api/boarding-points/location/<int:location_id>/', views.get_boarding_points_by_location, name='get_boarding_points_by_location'),
+    path('api/routes/<int:pk>/validate/', views.validate_route_stops, name='validate_route_stops'),
     
     # Locations
     path('locations/', views.location_list, name='location_list'),

@@ -1,0 +1,827 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Edit Route - {{ route.origin.name }} to {{ route.destination.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .route-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .route-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .section-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #343a40;
+    }
+    
+    /* Stop Item Styles */
+    .stops-container {
+        position: relative;
+    }
+    
+    .stop-item {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        position: relative;
+        transition: all 0.3s;
+    }
+    
+    .stop-item:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+    }
+    
+    .stop-item.origin {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #f0fff4 0%, #f8f9fa 100%);
+    }
+    
+    .stop-item.destination {
+        border-color: #dc3545;
+        background: linear-gradient(135deg, #fff5f5 0%, #f8f9fa 100%);
+    }
+    
+    .stop-item.food-stop {
+        border-color: #ffc107;
+        background: linear-gradient(135deg, #fffbf0 0%, #f8f9fa 100%);
+    }
+    
+    .stop-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .stop-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #007bff;
+        min-width: 50px;
+    }
+    
+    .stop-item.origin .stop-number {
+        color: #28a745;
+    }
+    
+    .stop-item.destination .stop-number {
+        color: #dc3545;
+    }
+    
+    .stop-item.food-stop .stop-number {
+        color: #ffc107;
+    }
+    
+    .stop-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .stop-content {
+        display: grid;
+        gap: 1rem;
+    }
+    
+    .form-row-custom {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .drag-handle {
+        cursor: move;
+        padding: 0.5rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .drag-handle:hover {
+        color: #007bff;
+    }
+    
+    .stop-item.dragging {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+    
+    .stop-item.drag-over {
+        border-color: #007bff;
+        border-style: dashed;
+    }
+    
+    /* Stop Type Badges */
+    .stop-type-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    
+    .stop-type-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .stop-type-badge.origin {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .stop-type-badge.destination {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .stop-type-badge.pickup {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .stop-type-badge.dropoff {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .stop-type-badge.food {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    /* Add Stop Button */
+    .add-stop-btn {
+        width: 100%;
+        padding: 1rem;
+        border: 2px dashed #dee2e6;
+        background: white;
+        border-radius: 0.5rem;
+        color: #6c757d;
+        font-weight: 500;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .add-stop-btn:hover {
+        border-color: #007bff;
+        color: #007bff;
+        background: #f8f9fa;
+    }
+    
+    /* Connection Lines */
+    .connection-line {
+        position: relative;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: -0.5rem 0;
+    }
+    
+    .connection-line::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, #dee2e6 0%, #007bff 50%, #dee2e6 100%);
+        transform: translateX(-50%);
+    }
+    
+    .connection-line .duration-badge {
+        background: white;
+        border: 2px solid #007bff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #007bff;
+        z-index: 1;
+    }
+    
+    /* Time Input Enhancement */
+    .time-input-group {
+        position: relative;
+    }
+    
+    .time-input-group .form-control {
+        padding-left: 2.5rem;
+    }
+    
+    .time-input-group i {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 5;
+    }
+    
+    /* Checkbox Styling */
+    .checkbox-group {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .custom-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        transition: background 0.2s;
+    }
+    
+    .custom-checkbox:hover {
+        background: #e9ecef;
+    }
+    
+    .custom-checkbox input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+    
+    /* Save Button */
+    .save-section {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 2px solid #dee2e6;
+        padding: 1.5rem;
+        margin: 0 -1.5rem -1.5rem -1.5rem;
+        border-radius: 0 0 0.5rem 0.5rem;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    /* Loading State */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    
+    .loading-overlay.active {
+        display: flex;
+    }
+    
+    .loading-spinner {
+        background: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+    
+    /* Food Stop Specific */
+    .food-stop-info {
+        background: #fffbf0;
+        border: 1px solid #ffc107;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .food-stop-info label {
+        font-weight: 600;
+        color: #856404;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mb-0">Saving route changes...</p>
+    </div>
+</div>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'route_list' %}">Routes</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'route_detail' route.pk %}">{{ route.origin.name }} → {{ route.destination.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Route Hero Section -->
+    <div class="route-hero">
+        <div class="route-title">
+            <i class="bi bi-pencil-square"></i>
+            <span>Edit Route: {{ route.origin.name }} → {{ route.destination.name }}</span>
+        </div>
+    </div>
+
+    <form method="post" id="routeEditForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-9">
+                <!-- Basic Route Information -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <i class="bi bi-info-circle"></i>
+                        Route Information
+                    </h3>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="distance" class="form-label">Distance (km)</label>
+                            <input type="number" step="0.01" class="form-control" id="distance" 
+                                   name="distance_km" value="{{ route.distance_km }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="duration_hours" class="form-label">Duration (Hours)</label>
+                            <input type="number" step="0.5" class="form-control" id="duration_hours" 
+                                   name="duration_hours" value="{{ duration_hours }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_active" 
+                                       name="is_active" {% if route.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Route Active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route Stops Section -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <i class="bi bi-signpost-2"></i>
+                        Route Stops & Points
+                        <small class="text-muted ms-2">(Drag to reorder)</small>
+                    </h3>
+                    
+                    <div id="stopsContainer" class="stops-container">
+                        <!-- Stops will be dynamically added here -->
+                    </div>
+                    
+                    <button type="button" class="add-stop-btn" onclick="addStop()">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Add Stop
+                    </button>
+                </div>
+
+                <!-- Save Section -->
+                <div class="save-section">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'route_detail' route.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <!-- Quick Guide -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <i class="bi bi-question-circle"></i>
+                        Quick Guide
+                    </h3>
+                    
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item border-0 px-0">
+                            <strong><i class="bi bi-geo-alt-fill text-success"></i> Origin Stop</strong>
+                            <p class="small text-muted mb-0">First stop - pickup only</p>
+                        </div>
+                        <div class="list-group-item border-0 px-0">
+                            <strong><i class="bi bi-geo-fill text-danger"></i> Destination Stop</strong>
+                            <p class="small text-muted mb-0">Last stop - dropoff only</p>
+                        </div>
+                        <div class="list-group-item border-0 px-0">
+                            <strong><i class="bi bi-signpost-2 text-primary"></i> Regular Stop</strong>
+                            <p class="small text-muted mb-0">Intermediate boarding points</p>
+                        </div>
+                        <div class="list-group-item border-0 px-0">
+                            <strong><i class="bi bi-cup-hot text-warning"></i> Food Stop</strong>
+                            <p class="small text-muted mb-0">Rest & refreshment breaks</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Boarding Points -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <i class="bi bi-pin-map"></i>
+                        Available Points
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small">Filter by Location</label>
+                        <select class="form-select form-select-sm" id="locationFilter">
+                            <option value="">All Locations</option>
+                            {% for location in all_locations %}
+                            <option value="{{ location.id }}">{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="availablePointsList" style="max-height: 400px; overflow-y: auto;">
+                        {% for point in all_boarding_points %}
+                        <div class="border rounded p-2 mb-2 small" data-location="{{ point.location.id }}">
+                            <strong>{{ point.name }}</strong>
+                            <div class="text-muted">
+                                <i class="bi bi-geo-alt"></i> {{ point.location.name }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let stopCounter = 0;
+let stopsData = [];
+
+// Load existing stops
+const existingStops = {{ existing_stops|safe }};
+const boardingPoints = {{ boarding_points_json|safe }};
+
+// Initialize stops on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (existingStops && existingStops.length > 0) {
+        existingStops.forEach(stop => addStop(stop));
+    } else {
+        // Add origin and destination as default
+        addStop({
+            stop_order: 1,
+            boarding_point_id: null,
+            is_pickup: true,
+            is_dropoff: false,
+            is_origin: true
+        });
+        addStop({
+            stop_order: 2,
+            boarding_point_id: null,
+            is_pickup: false,
+            is_dropoff: true,
+            is_destination: true
+        });
+    }
+    
+    // Setup location filter
+    document.getElementById('locationFilter').addEventListener('change', filterBoardingPoints);
+});
+
+function addStop(existingData = null) {
+    stopCounter++;
+    const container = document.getElementById('stopsContainer');
+    
+    // Determine stop type
+    const isOrigin = existingData?.is_origin || false;
+    const isDestination = existingData?.is_destination || false;
+    const isFoodStop = existingData?.is_food_stop || false;
+    
+    const stopClasses = ['stop-item'];
+    if (isOrigin) stopClasses.push('origin');
+    if (isDestination) stopClasses.push('destination');
+    if (isFoodStop) stopClasses.push('food-stop');
+    
+    const stopDiv = document.createElement('div');
+    stopDiv.className = stopClasses.join(' ');
+    stopDiv.dataset.stopId = stopCounter;
+    stopDiv.draggable = !isOrigin && !isDestination;
+    
+    stopDiv.innerHTML = `
+        ${container.children.length > 0 ? `
+        <div class="connection-line">
+            <span class="duration-badge">
+                <i class="bi bi-clock"></i> <span class="duration-text">-- min</span>
+            </span>
+        </div>
+        ` : ''}
+        
+        <div class="stop-header">
+            <div class="d-flex align-items-center gap-3">
+                ${!isOrigin && !isDestination ? '<div class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></div>' : ''}
+                <div class="stop-number">#${existingData?.stop_order || (container.children.length + 1)}</div>
+                <div class="stop-type-badges">
+                    ${isOrigin ? '<span class="stop-type-badge origin"><i class="bi bi-geo-alt-fill"></i> Origin</span>' : ''}
+                    ${isDestination ? '<span class="stop-type-badge destination"><i class="bi bi-geo-fill"></i> Destination</span>' : ''}
+                    ${isFoodStop ? '<span class="stop-type-badge food"><i class="bi bi-cup-hot"></i> Food Stop</span>' : ''}
+                </div>
+            </div>
+            <div class="stop-controls">
+                ${!isOrigin && !isDestination ? `
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeStop(${stopCounter})" title="Remove stop">
+                    <i class="bi bi-trash"></i>
+                </button>
+                ` : ''}
+            </div>
+        </div>
+        
+        <div class="stop-content">
+            <div class="form-row-custom">
+                <div>
+                    <label class="form-label">Boarding Point *</label>
+                    <select class="form-select" name="stops[${stopCounter}][boarding_point]" required onchange="updateStopDurations()">
+                        <option value="">Select Point</option>
+                        ${generateBoardingPointOptions(existingData?.boarding_point_id)}
+                    </select>
+                </div>
+                
+                <div class="time-input-group">
+                    <label class="form-label">Time from Origin *</label>
+                    <i class="bi bi-clock"></i>
+                    <input type="text" class="form-control" name="stops[${stopCounter}][time_from_origin]" 
+                           placeholder="HH:MM" value="${existingData?.time_from_origin || ''}" 
+                           onchange="updateStopDurations()" required>
+                    <small class="text-muted">Format: HH:MM (e.g., 01:30)</small>
+                </div>
+            </div>
+            
+            ${!isOrigin && !isDestination ? `
+            <div class="checkbox-group">
+                <label class="custom-checkbox">
+                    <input type="checkbox" name="stops[${stopCounter}][is_pickup]" 
+                           ${existingData?.is_pickup ? 'checked' : ''}>
+                    <span><i class="bi bi-arrow-up-circle text-success"></i> Pickup Point</span>
+                </label>
+                
+                <label class="custom-checkbox">
+                    <input type="checkbox" name="stops[${stopCounter}][is_dropoff]" 
+                           ${existingData?.is_dropoff ? 'checked' : ''}>
+                    <span><i class="bi bi-arrow-down-circle text-info"></i> Dropoff Point</span>
+                </label>
+                
+                <label class="custom-checkbox">
+                    <input type="checkbox" name="stops[${stopCounter}][is_food_stop]" 
+                           onchange="toggleFoodStopInfo(${stopCounter})" ${isFoodStop ? 'checked' : ''}>
+                    <span><i class="bi bi-cup-hot text-warning"></i> Food Stop</span>
+                </label>
+            </div>
+            
+            <div id="foodStopInfo${stopCounter}" class="food-stop-info" style="display: ${isFoodStop ? 'block' : 'none'};">
+                <label class="form-label">Break Duration (minutes)</label>
+                <input type="number" class="form-control" name="stops[${stopCounter}][break_duration]" 
+                       value="${existingData?.break_duration || 30}" min="15" max="120">
+            </div>
+            ` : ''}
+            
+            ${isOrigin ? '<input type="hidden" name="stops[' + stopCounter + '][is_pickup]" value="true">' : ''}
+            ${isDestination ? '<input type="hidden" name="stops[' + stopCounter + '][is_dropoff]" value="true">' : ''}
+            
+            <input type="hidden" name="stops[${stopCounter}][stop_order]" value="${existingData?.stop_order || (container.children.length + 1)}">
+            <input type="hidden" name="stops[${stopCounter}][is_origin]" value="${isOrigin}">
+            <input type="hidden" name="stops[${stopCounter}][is_destination]" value="${isDestination}">
+        </div>
+    `;
+    
+    container.appendChild(stopDiv);
+    
+    // Setup drag and drop
+    if (!isOrigin && !isDestination) {
+        setupDragAndDrop(stopDiv);
+    }
+    
+    return stopDiv;
+}
+
+function generateBoardingPointOptions(selectedId = null) {
+    return boardingPoints.map(point => 
+        `<option value="${point.id}" ${point.id == selectedId ? 'selected' : ''}>
+            ${point.name} - ${point.location_name}
+        </option>`
+    ).join('');
+}
+
+function removeStop(stopId) {
+    if (confirm('Are you sure you want to remove this stop?')) {
+        const stopElement = document.querySelector(`[data-stop-id="${stopId}"]`);
+        if (stopElement) {
+            const prevLine = stopElement.previousElementSibling;
+            if (prevLine && prevLine.classList.contains('connection-line')) {
+                prevLine.remove();
+            }
+            stopElement.remove();
+            reorderStops();
+            updateStopDurations();
+        }
+    }
+}
+
+function toggleFoodStopInfo(stopId) {
+    const checkbox = document.querySelector(`[data-stop-id="${stopId}"] input[name*="[is_food_stop]"]`);
+    const infoDiv = document.getElementById(`foodStopInfo${stopId}`);
+    const stopItem = document.querySelector(`[data-stop-id="${stopId}"]`);
+    
+    if (checkbox.checked) {
+        infoDiv.style.display = 'block';
+        stopItem.classList.add('food-stop');
+    } else {
+        infoDiv.style.display = 'none';
+        stopItem.classList.remove('food-stop');
+    }
+}
+
+function reorderStops() {
+    const stops = document.querySelectorAll('.stop-item');
+    stops.forEach((stop, index) => {
+        const numberEl = stop.querySelector('.stop-number');
+        if (numberEl) numberEl.textContent = `#${index + 1}`;
+        
+        const orderInput = stop.querySelector('input[name*="[stop_order]"]');
+        if (orderInput) orderInput.value = index + 1;
+    });
+}
+
+function updateStopDurations() {
+    const stops = document.querySelectorAll('.stop-item');
+    let prevTime = 0;
+    
+    stops.forEach((stop, index) => {
+        const timeInput = stop.querySelector('input[name*="[time_from_origin]"]');
+        if (!timeInput || !timeInput.value) return;
+        
+        const timeParts = timeInput.value.split(':');
+        const currentMinutes = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
+        
+        if (index > 0) {
+            const duration = currentMinutes - prevTime;
+            const prevStop = stops[index - 1];
+            const durationBadge = stop.querySelector('.duration-text');
+            if (durationBadge) {
+                durationBadge.textContent = `${duration} min`;
+            }
+        }
+        
+        prevTime = currentMinutes;
+    });
+}
+
+function filterBoardingPoints() {
+    const locationId = document.getElementById('locationFilter').value;
+    const points = document.querySelectorAll('#availablePointsList > div');
+    
+    points.forEach(point => {
+        if (!locationId || point.dataset.location === locationId) {
+            point.style.display = 'block';
+        } else {
+            point.style.display = 'none';
+        }
+    });
+}
+
+// Drag and Drop Functionality
+function setupDragAndDrop(element) {
+    element.addEventListener('dragstart', handleDragStart);
+    element.addEventListener('dragend', handleDragEnd);
+    element.addEventListener('dragover', handleDragOver);
+    element.addEventListener('drop', handleDrop);
+    element.addEventListener('dragenter', handleDragEnter);
+    element.addEventListener('dragleave', handleDragLeave);
+}
+
+let draggedElement = null;
+
+function handleDragStart(e) {
+    draggedElement = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.stop-item').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    if (this !== draggedElement) {
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    if (draggedElement !== this) {
+        const container = document.getElementById('stopsContainer');
+        const allStops = Array.from(container.children);
+        const draggedIndex = allStops.indexOf(draggedElement);
+        const targetIndex = allStops.indexOf(this);
+        
+        if (draggedIndex < targetIndex) {
+            this.parentNode.insertBefore(draggedElement, this.nextSibling);
+        } else {
+            this.parentNode.insertBefore(draggedElement, this);
+        }
+        
+        reorderStops();
+    }
+    
+    return false;
+}
+
+// Form Submission
+document.getElementById('routeEditForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validate at least 2 stops (origin and destination)
+    const stops = document.querySelectorAll('.stop-item');
+    if (stops.length < 2) {
+        alert('Route must have at least an origin and destination stop.');
+        return;
+    }
+    
+    // Show loading overlay
+    document.getElementById('loadingOverlay').classList.add('active');
+    
+    // Submit form
+    this.submit();
+});
+</script>
+{% endblock %}

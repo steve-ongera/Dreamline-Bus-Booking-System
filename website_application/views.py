@@ -2359,7 +2359,169 @@ def route_edit(request, pk):
         'duration_hours': duration_hours
     }
     
-    return render(request, 'routes/route_edit.html', context)
+    return render(request, 'admin/routes/route_edit.html', context)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db import transaction
+from django.http import JsonResponse
+from datetime import timedelta
+import json
+from .models import Route, RouteStop, BoardingPoint, Location
+
+
+def route_create(request):
+    """Create new route with stops"""
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Get origin and destination
+                origin_id = request.POST.get('origin')
+                destination_id = request.POST.get('destination')
+                
+                if not origin_id or not destination_id:
+                    messages.error(request, 'Please select both origin and destination.')
+                    return redirect('route_create')
+                
+                if origin_id == destination_id:
+                    messages.error(request, 'Origin and destination must be different.')
+                    return redirect('route_create')
+                
+                # Check if route already exists
+                existing_route = Route.objects.filter(
+                    origin_id=origin_id,
+                    destination_id=destination_id
+                ).first()
+                
+                if existing_route:
+                    messages.warning(
+                        request, 
+                        f'Route from {existing_route.origin.name} to {existing_route.destination.name} already exists. Redirecting to edit.'
+                    )
+                    return redirect('route_edit', pk=existing_route.pk)
+                
+                # Create the route
+                route = Route.objects.create(
+                    origin_id=origin_id,
+                    destination_id=destination_id,
+                    distance_km=request.POST.get('distance_km', 0),
+                    estimated_duration=timedelta(hours=float(request.POST.get('duration_hours', 0))),
+                    is_active=request.POST.get('is_active') == 'on'
+                )
+                
+                # Process stops from form data
+                stops_data = {}
+                for key, value in request.POST.items():
+                    if key.startswith('stops['):
+                        # Parse: stops[1][boarding_point]
+                        parts = key.replace('stops[', '').replace(']', '').split('[')
+                        stop_id = parts[0]
+                        field_name = parts[1] if len(parts) > 1 else None
+                        
+                        if stop_id not in stops_data:
+                            stops_data[stop_id] = {}
+                        
+                        if field_name:
+                            stops_data[stop_id][field_name] = value
+                
+                # Create stops
+                created_stops = 0
+                for stop_id, stop_data in stops_data.items():
+                    boarding_point_id = stop_data.get('boarding_point')
+                    if not boarding_point_id:
+                        continue
+                    
+                    # Parse time_from_origin (HH:MM format)
+                    time_str = stop_data.get('time_from_origin', '00:00')
+                    try:
+                        hours, minutes = map(int, time_str.split(':'))
+                        time_from_origin = timedelta(hours=hours, minutes=minutes)
+                    except:
+                        time_from_origin = timedelta(0)
+                    
+                    # Parse break_duration if it's a food stop
+                    break_duration = None
+                    if stop_data.get('is_food_stop') == 'on':
+                        try:
+                            break_minutes = int(stop_data.get('break_duration', 30))
+                            break_duration = timedelta(minutes=break_minutes)
+                        except:
+                            break_duration = timedelta(minutes=30)
+                    
+                    RouteStop.objects.create(
+                        route=route,
+                        boarding_point_id=boarding_point_id,
+                        stop_order=int(stop_data.get('stop_order', 0)),
+                        time_from_origin=time_from_origin,
+                        is_pickup=stop_data.get('is_pickup') == 'on' or stop_data.get('is_origin') == 'true',
+                        is_dropoff=stop_data.get('is_dropoff') == 'on' or stop_data.get('is_destination') == 'true',
+                        # Optional fields if you have the enhanced model
+                        # is_food_stop=stop_data.get('is_food_stop') == 'on',
+                        # break_duration=break_duration,
+                        # notes=stop_data.get('notes', '')
+                    )
+                    created_stops += 1
+                
+                if created_stops < 2:
+                    messages.warning(
+                        request, 
+                        f'Route created but only {created_stops} stop(s) added. Please add more stops.'
+                    )
+                    return redirect('route_edit', pk=route.pk)
+                
+                messages.success(
+                    request, 
+                    f'Route "{route.origin.name} → {route.destination.name}" created successfully with {created_stops} stops!'
+                )
+                return redirect('route_detail', pk=route.pk)
+                
+        except Exception as e:
+            messages.error(request, f'Error creating route: {str(e)}')
+            return redirect('route_create')
+    
+    # GET request - prepare data for template
+    # Get all boarding points for the dropdowns
+    boarding_points = []
+    for point in BoardingPoint.objects.filter(is_active=True).select_related('location'):
+        boarding_points.append({
+            'id': point.id,
+            'name': point.name,
+            'location_name': point.location.name,
+            'location_id': point.location.id,
+            'address': point.address,
+            'landmark': point.landmark or ''
+        })
+    
+    context = {
+        'boarding_points_json': json.dumps(boarding_points),
+        'all_boarding_points': BoardingPoint.objects.filter(is_active=True).select_related('location'),
+        'all_locations': Location.objects.filter(is_active=True).order_by('name'),
+    }
+    
+    return render(request, 'admin/routes/route_create.html', context)
+
+
+# Helper function to calculate distance between locations (optional)
+def calculate_route_distance(origin_id, destination_id):
+    """
+    Calculate estimated distance between two locations
+    You can integrate with Google Maps API or use a distance matrix
+    For now, returns a default value
+    """
+    # TODO: Integrate with mapping service
+    return 100.0  # Default 100km
+
+
+# Helper function to estimate duration (optional)
+def estimate_route_duration(distance_km):
+    """
+    Estimate travel duration based on distance
+    Assumes average speed of 60 km/h
+    """
+    average_speed = 60  # km/h
+    hours = distance_km / average_speed
+    return timedelta(hours=hours)
 
 
 # Optional: AJAX endpoint to get boarding points by location
