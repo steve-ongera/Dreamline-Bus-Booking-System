@@ -1,0 +1,519 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}All Trips - Trip Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #343a40;
+        margin: 0;
+    }
+    
+    /* Filter section styling */
+    .filter-section {
+        background: white;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    /* Trip card styling */
+    .trip-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    
+    .trip-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        border-color: #007bff;
+    }
+    
+    .trip-header {
+        background: #f8f9fa;
+        padding: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        position: relative;
+    }
+    
+    .trip-route {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: #343a40;
+    }
+    
+    .route-arrow {
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+    
+    .trip-date-time {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .trip-body {
+        padding: 1.25rem;
+    }
+    
+    .trip-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .info-icon {
+        width: 36px;
+        height: 36px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #007bff;
+        font-size: 1rem;
+    }
+    
+    .info-details {
+        flex: 1;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.125rem;
+    }
+    
+    .info-value {
+        font-weight: 600;
+        color: #343a40;
+        font-size: 0.875rem;
+    }
+    
+    .progress-container {
+        background: #f8f9fa;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .seat-progress {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .progress {
+        height: 6px;
+    }
+    
+    /* Tabs styling */
+    .nav-tabs {
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 1rem 1.25rem;
+        background: transparent;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+        background: transparent;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .trip-info {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .trip-date-time {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .status-badge {
+            position: static;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Trip Management</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="bi bi-calendar3 text-primary"></i>
+            Trip Management
+        </h1>
+        <a href="{% url 'trip_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Schedule New Trip
+        </a>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Route or bus..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for value, label in trip_statuses %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Operator</label>
+                    <select name="operator" class="form-select">
+                        <option value="">All Operators</option>
+                        {% for operator in operators %}
+                        <option value="{{ operator.id }}" {% if selected_operator == operator.id|stringformat:"s" %}selected{% endif %}>
+                            {{ operator.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#upcoming">
+                <i class="bi bi-calendar-event me-1"></i> Upcoming Trips ({{ upcoming_trips.count }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#past">
+                <i class="bi bi-clock-history me-1"></i> Past Trips ({{ past_trips.count }})
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Upcoming Trips -->
+        <div class="tab-pane fade show active" id="upcoming">
+            {% if upcoming_trips %}
+            <div class="row">
+                {% for trip in upcoming_trips %}
+                <div class="col-12">
+                    <div class="trip-card">
+                        <div class="trip-header">
+                            <span class="badge {% if trip.status == 'scheduled' %}bg-primary{% elif trip.status == 'boarding' %}bg-warning{% elif trip.status == 'departed' %}bg-info{% elif trip.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %} status-badge">
+                                {{ trip.get_status_display }}
+                            </span>
+                            <div class="trip-route">
+                                <span>{{ trip.route.origin.name }}</span>
+                                <span class="route-arrow"><i class="bi bi-arrow-right"></i></span>
+                                <span>{{ trip.route.destination.name }}</span>
+                            </div>
+                            <div class="trip-date-time">
+                                <span><i class="bi bi-calendar3 me-1"></i> {{ trip.departure_date|date:"D, M d, Y" }}</span>
+                                <span><i class="bi bi-clock me-1"></i> {{ trip.departure_time|time:"g:i A" }} - {{ trip.arrival_time|time:"g:i A" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="trip-body">
+                            <div class="trip-info">
+                                <div class="info-item">
+                                    <div class="info-icon">
+                                        <i class="bi bi-bus-front"></i>
+                                    </div>
+                                    <div class="info-details">
+                                        <div class="info-label">Bus</div>
+                                        <div class="info-value">{{ trip.bus.bus_name }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-icon">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div class="info-details">
+                                        <div class="info-label">Operator</div>
+                                        <div class="info-value">{{ trip.bus.operator.name }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-icon">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <div class="info-details">
+                                        <div class="info-label">Bookings</div>
+                                        <div class="info-value">{{ trip.bookings_count }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-icon">
+                                        <i class="bi bi-cash"></i>
+                                    </div>
+                                    <div class="info-details">
+                                        <div class="info-label">Fare Range</div>
+                                        <div class="info-value">KES {{ trip.base_fare_normal }} - {{ trip.base_fare_vip }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="progress-container">
+                                <div class="seat-progress">
+                                    <span><strong>Seat Occupancy</strong></span>
+                                    <span>{{ trip.seats_booked }}/{{ trip.seats }} seats</span>
+                                </div>
+                                <div class="progress">
+                                   {% widthratio trip.seats_booked trip.seats 100 as percentage %}
+                                    <div class="progress-bar bg-primary" style="width: {{ percentage }}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'trip_detail' trip.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i> View Details
+                                </a>
+                                <a href="{% url 'trip_edit' trip.pk %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </a>
+                                <a href="{% url 'export_passengers' trip.pk %}" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-file-earmark-excel me-1"></i> Export
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="bi bi-calendar-x"></i>
+                </div>
+                <h4 class="text-muted">No upcoming trips</h4>
+                <p class="text-muted mb-3">Schedule a new trip to get started</p>
+                <a href="{% url 'trip_add' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Schedule Trip
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Past Trips -->
+        <div class="tab-pane fade" id="past">
+            {% if past_trips %}
+            <div class="row">
+                {% for trip in past_trips %}
+                <div class="col-12">
+                    <div class="trip-card">
+                        <div class="trip-header">
+                            <span class="badge {% if trip.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %} status-badge">
+                                {{ trip.get_status_display }}
+                            </span>
+                            <div class="trip-route">
+                                <span>{{ trip.route.origin.name }}</span>
+                                <span class="route-arrow"><i class="bi bi-arrow-right"></i></span>
+                                <span>{{ trip.route.destination.name }}</span>
+                            </div>
+                            <div class="trip-date-time">
+                                <span><i class="bi bi-calendar3 me-1"></i> {{ trip.departure_date|date:"D, M d, Y" }}</span>
+                                <span><i class="bi bi-clock me-1"></i> {{ trip.departure_time|time:"g:i A" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="trip-body">
+                            <div class="trip-info">
+                                <div class="info-item">
+                                    <div class="info-icon">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <div class="info-details">
+                                        <div class="info-label">Passengers</div>
+                                        <div class="info-value">{{ trip.bookings_count }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-icon">
+                                        <i class="bi bi-grid-3x3"></i>
+                                    </div>
+                                    <div class="info-details">
+                                        <div class="info-label">Seats Sold</div>
+                                        <div class="info-value">{{ trip.seats_booked }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'trip_detail' trip.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <h4 class="text-muted">No past trips</h4>
+                <p class="text-muted mb-0">Completed trips will appear here</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit on filter change
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', () => {
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>
+{% endblock %}

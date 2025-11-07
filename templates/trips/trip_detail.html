@@ -1,0 +1,749 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Trip Details - {{ trip.route }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title-section h1 {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.25rem;
+        font-size: 1.5rem;
+    }
+    
+    .page-subtitle {
+        color: #6c757d;
+        font-size: 0.95rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    /* Trip header section */
+    .trip-header {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .route-display {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: #343a40;
+    }
+    
+    .trip-meta {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .trip-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Statistics grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.25rem;
+        border: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #007bff;
+        font-size: 1.25rem;
+    }
+    
+    .stat-content {
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #343a40;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    /* Tabs styling */
+    .nav-tabs {
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 1rem 1.25rem;
+        background: transparent;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+        background: transparent;
+    }
+    
+    /* Table styling */
+    .passenger-table {
+        font-size: 0.85rem;
+    }
+    
+    .passenger-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem;
+        color: #495057;
+    }
+    
+    .passenger-table td {
+        vertical-align: middle;
+        padding: 0.75rem;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .seat-badge {
+        background: #007bff;
+        color: white;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+        margin: 0.1rem;
+    }
+    
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+        font-weight: 500;
+    }
+    
+    /* Seat map styling */
+    .seat-map-container {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+        min-height: 400px;
+    }
+    
+    .bus-container {
+        max-width: 500px;
+        margin: 0 auto;
+        background: white;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .driver-area {
+        text-align: center;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 1rem;
+    }
+    
+    .driver-seat {
+        display: inline-block;
+        padding: 0.6rem 1.2rem;
+        background: #343a40;
+        color: white;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .seat-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 6px 0;
+        gap: 4px;
+    }
+    
+    .seat {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid;
+        cursor: default;
+        transition: all 0.2s;
+        position: relative;
+    }
+    
+    .seat.available {
+        background: #28a745;
+        border-color: #218838;
+        color: white;
+    }
+    
+    .seat.booked {
+        background: #dc3545;
+        border-color: #c82333;
+        color: white;
+    }
+    
+    .seat.pending {
+        background: #ffc107;
+        border-color: #e0a800;
+        color: #000;
+    }
+    
+    .seat-aisle {
+        width: 25px;
+        position: relative;
+    }
+    
+    .seat-aisle::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: #dee2e6;
+    }
+    
+    .legend {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #495057;
+    }
+    
+    .legend-box {
+        width: 20px;
+        height: 20px;
+        border: 1px solid;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    .empty-state-icon {
+        font-size: 2.5rem;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+    }
+    
+    /* Action buttons */
+    .action-button-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .action-buttons {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        
+        .trip-meta {
+            gap: 1rem;
+        }
+        
+        .route-display {
+            font-size: 1.25rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .seat {
+            width: 35px;
+            height: 35px;
+            font-size: 0.65rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'trip_list' %}">Trip Management</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Trip Details</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <a href="{% url 'trip_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left me-1"></i> Back to Trips
+            </a>
+            <h1><i class="bi bi-journey text-primary"></i> Trip Details</h1>
+            <p class="page-subtitle">Manage trip information and passenger bookings</p>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'export_passengers' trip.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export
+            </a>
+            <a href="{% url 'trip_edit' trip.pk %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </a>
+        </div>
+    </div>
+
+    <!-- Trip Header -->
+    <div class="trip-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="route-display">
+                    <span>{{ trip.route.origin.name }}</span>
+                    <i class="bi bi-arrow-right text-muted"></i>
+                    <span>{{ trip.route.destination.name }}</span>
+                </div>
+                <div class="trip-meta">
+                    <div class="trip-meta-item">
+                        <i class="bi bi-calendar3"></i>
+                        <span>{{ trip.departure_date|date:"F d, Y" }}</span>
+                    </div>
+                    <div class="trip-meta-item">
+                        <i class="bi bi-clock"></i>
+                        <span>{{ trip.departure_time|time:"g:i A" }} - {{ trip.arrival_time|time:"g:i A" }}</span>
+                    </div>
+                    <div class="trip-meta-item">
+                        <i class="bi bi-bus-front"></i>
+                        <span>{{ trip.bus.bus_name }}</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <span class="badge {% if trip.status == 'scheduled' %}bg-primary{% elif trip.status == 'boarding' %}bg-warning{% elif trip.status == 'departed' %}bg-info{% elif trip.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ trip.get_status_display }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Status Control -->
+        <div class="action-button-group">
+            <form method="post" action="{% url 'update_trip_status' trip.pk %}" class="d-inline">
+                {% csrf_token %}
+                <select name="status" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                    {% for value, label in trip.TRIP_STATUS_CHOICES %}
+                    <option value="{{ value }}" {% if trip.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% if trip.status not in 'completed,cancelled' %}
+            <form method="post" action="{% url 'cancel_trip' trip.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Cancel this trip? All bookings will be cancelled.')">
+                    <i class="bi bi-x-circle me-1"></i> Cancel Trip
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ confirmed_bookings.count }}</div>
+                <div class="stat-label">Confirmed Passengers</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #28a745;">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">KES {{ total_revenue|floatformat:0 }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #ffc107;">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ pending_bookings.count }}</div>
+                <div class="stat-label">Pending Bookings</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #17a2b8;">
+                <i class="bi bi-grid-3x3"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ available_seats }}/{{ total_seats }}</div>
+                <div class="stat-label">Available Seats</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#passengers">
+                <i class="bi bi-people me-1"></i> Passengers ({{ confirmed_bookings.count }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#seatMap">
+                <i class="bi bi-grid-3x3 me-1"></i> Seat Map
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pending">
+                <i class="bi bi-hourglass me-1"></i> Pending ({{ pending_bookings.count }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cancelled">
+                <i class="bi bi-x-circle me-1"></i> Cancelled ({{ cancelled_bookings.count }})
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Passengers Tab -->
+        <div class="tab-pane fade show active" id="passengers">
+            <div class="card">
+                <div class="card-body">
+                    {% if confirmed_bookings %}
+                    <div class="table-responsive">
+                        <table class="table passenger-table">
+                            <thead>
+                                <tr>
+                                    <th>Passenger Name</th>
+                                    <th>ID Number</th>
+                                    <th>Phone</th>
+                                    <th>Seat(s)</th>
+                                    <th>Boarding</th>
+                                    <th>Dropping</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in confirmed_bookings %}
+                                <tr>
+                                    <td><strong>{{ booking.customer_full_name }}</strong></td>
+                                    <td>{{ booking.customer_id_number|default:"-" }}</td>
+                                    <td>{{ booking.customer_phone }}</td>
+                                    <td>
+                                        {% for seat_booking in booking.seat_bookings.all %}
+                                        <span class="seat-badge">{{ seat_booking.seat.seat_number }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ booking.boarding_point.name }}</td>
+                                    <td>{{ booking.dropping_point.name }}</td>
+                                    <td>KES {{ booking.total_amount }}</td>
+                                    <td>
+                                        <span class="badge bg-success status-badge">
+                                            {{ booking.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <h5 class="text-muted">No confirmed passengers</h5>
+                        <p class="text-muted mb-0">No passengers have confirmed bookings for this trip yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Seat Map Tab -->
+        <div class="tab-pane fade" id="seatMap">
+            <div class="card">
+                <div class="card-body">
+                    <div class="seat-map-container">
+                        <div class="bus-container">
+                            <div class="driver-area">
+                                <div class="driver-seat">
+                                    <i class="bi bi-steering-wheel me-1"></i> DRIVER
+                                </div>
+                            </div>
+                            
+                            <div id="seatLayout"></div>
+                            
+                            <div class="legend">
+                                <div class="legend-item">
+                                    <div class="legend-box available"></div>
+                                    <span>Available</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-box booked"></div>
+                                    <span>Booked</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-box pending"></div>
+                                    <span>Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Tab -->
+        <div class="tab-pane fade" id="pending">
+            <div class="card">
+                <div class="card-body">
+                    {% if pending_bookings %}
+                    <div class="table-responsive">
+                        <table class="table passenger-table">
+                            <thead>
+                                <tr>
+                                    <th>Booking Ref</th>
+                                    <th>Passenger Name</th>
+                                    <th>Phone</th>
+                                    <th>Seats</th>
+                                    <th>Amount</th>
+                                    <th>Booked At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in pending_bookings %}
+                                <tr>
+                                    <td><strong>{{ booking.booking_reference }}</strong></td>
+                                    <td>{{ booking.customer_full_name }}</td>
+                                    <td>{{ booking.customer_phone }}</td>
+                                    <td>
+                                        {% for seat_booking in booking.seat_bookings.all %}
+                                        <span class="seat-badge" style="background: #ffc107; color: #000;">{{ seat_booking.seat.seat_number }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>KES {{ booking.total_amount }}</td>
+                                    <td>{{ booking.created_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="bi bi-hourglass"></i>
+                        </div>
+                        <h5 class="text-muted">No pending bookings</h5>
+                        <p class="text-muted mb-0">There are no pending bookings for this trip.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Cancelled Tab -->
+        <div class="tab-pane fade" id="cancelled">
+            <div class="card">
+                <div class="card-body">
+                    {% if cancelled_bookings %}
+                    <div class="table-responsive">
+                        <table class="table passenger-table">
+                            <thead>
+                                <tr>
+                                    <th>Booking Ref</th>
+                                    <th>Passenger Name</th>
+                                    <th>Phone</th>
+                                    <th>Amount</th>
+                                    <th>Cancelled At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in cancelled_bookings %}
+                                <tr>
+                                    <td><strong>{{ booking.booking_reference }}</strong></td>
+                                    <td>{{ booking.customer_full_name }}</td>
+                                    <td>{{ booking.customer_phone }}</td>
+                                    <td>KES {{ booking.total_amount }}</td>
+                                    <td>{{ booking.updated_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                        <h5 class="text-muted">No cancelled bookings</h5>
+                        <p class="text-muted mb-0">No bookings have been cancelled for this trip.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const layoutConfig = {{ layout_config|safe }};
+const seats = {{ seats|safe }};
+
+function renderSeatMap() {
+    const container = document.getElementById('seatLayout');
+    if (!layoutConfig || !layoutConfig.rows) return;
+
+    layoutConfig.rows.forEach(row => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'seat-row';
+
+        row.seats.forEach((seat, index) => {
+            if (index === 2 && row.seats.length > 2) {
+                const aisle = document.createElement('div');
+                aisle.className = 'seat-aisle';
+                rowDiv.appendChild(aisle);
+            }
+
+            const seatDiv = document.createElement('div');
+            const seatNumber = `${row.row}${seat.position}`;
+            
+            const seatStatus = getSeatStatus(seatNumber);
+            seatDiv.className = `seat ${seatStatus}`;
+            seatDiv.textContent = seatNumber;
+            seatDiv.title = `Seat ${seatNumber} - ${seatStatus}`;
+
+            rowDiv.appendChild(seatDiv);
+        });
+
+        container.appendChild(rowDiv);
+    });
+}
+
+function getSeatStatus(seatNumber) {
+    return 'available';
+}
+
+renderSeatMap();
+</script>
+{% endblock %}

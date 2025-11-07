@@ -190,3 +190,146 @@ class SeatLayoutForm(forms.ModelForm):
             instance.save()
         
         return instance
+    
+
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Trip, Bus, Route
+
+
+class TripForm(forms.ModelForm):
+    """Form for scheduling/editing trips"""
+    
+    class Meta:
+        model = Trip
+        fields = [
+            'bus', 'route', 'departure_date', 'departure_time', 'arrival_time',
+            'base_fare_vip', 'base_fare_business', 'base_fare_normal',
+            'status', 'is_active'
+        ]
+        widgets = {
+            'bus': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'route': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'departure_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'required': True
+            }),
+            'departure_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time',
+                'required': True
+            }),
+            'arrival_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time',
+                'required': True
+            }),
+            'base_fare_vip': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '0.00',
+                'step': '0.01',
+                'min': '0',
+                'required': True
+            }),
+            'base_fare_business': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '0.00',
+                'step': '0.01',
+                'min': '0',
+                'required': True
+            }),
+            'base_fare_normal': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '0.00',
+                'step': '0.01',
+                'min': '0',
+                'required': True
+            }),
+            'status': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter only active buses and routes
+        self.fields['bus'].queryset = Bus.objects.filter(is_active=True).select_related('operator', 'seat_layout')
+        self.fields['route'].queryset = Route.objects.filter(is_active=True).select_related('origin', 'destination')
+        
+        # Set default date to today
+        if not self.instance.pk:
+            self.initial['departure_date'] = timezone.now().date()
+            self.initial['status'] = 'scheduled'
+            self.initial['is_active'] = True
+    
+    def clean_departure_date(self):
+        """Validate departure date is not in the past"""
+        departure_date = self.cleaned_data.get('departure_date')
+        
+        # Allow past dates for editing existing trips
+        if not self.instance.pk:
+            if departure_date < timezone.now().date():
+                raise ValidationError("Departure date cannot be in the past.")
+        
+        return departure_date
+    
+    def clean_arrival_time(self):
+        """Validate arrival time is after departure time"""
+        departure_time = self.cleaned_data.get('departure_time')
+        arrival_time = self.cleaned_data.get('arrival_time')
+        
+        if departure_time and arrival_time:
+            if arrival_time <= departure_time:
+                raise ValidationError("Arrival time must be after departure time.")
+        
+        return arrival_time
+    
+    def clean(self):
+        """Additional validation"""
+        cleaned_data = super().clean()
+        bus = cleaned_data.get('bus')
+        departure_date = cleaned_data.get('departure_date')
+        departure_time = cleaned_data.get('departure_time')
+        
+        # Check for duplicate trips (same bus, date, and time)
+        if bus and departure_date and departure_time:
+            duplicate_check = Trip.objects.filter(
+                bus=bus,
+                departure_date=departure_date,
+                departure_time=departure_time
+            )
+            
+            # Exclude current instance when editing
+            if self.instance.pk:
+                duplicate_check = duplicate_check.exclude(pk=self.instance.pk)
+            
+            if duplicate_check.exists():
+                raise ValidationError(
+                    f"A trip for {bus.bus_name} is already scheduled on "
+                    f"{departure_date} at {departure_time}."
+                )
+        
+        # Validate fare amounts
+        vip_fare = cleaned_data.get('base_fare_vip', 0)
+        business_fare = cleaned_data.get('base_fare_business', 0)
+        normal_fare = cleaned_data.get('base_fare_normal', 0)
+        
+        if vip_fare < business_fare:
+            raise ValidationError("VIP fare should be equal to or greater than Business fare.")
+        
+        if business_fare < normal_fare:
+            raise ValidationError("Business fare should be equal to or greater than Normal fare.")
+        
+        return cleaned_data

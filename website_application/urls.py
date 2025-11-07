@@ -42,5 +42,18 @@ urlpatterns = [
     
     # AJAX/API URLs
     path('buses/layout/<int:pk>/preview/', views.get_layout_preview, name='layout_preview'),
+
+    # Trip URLs
+    path('trips/', views.trip_list, name='trip_list'),
+    path('trips/add/', views.trip_form, name='trip_add'),
+    path('trips/<int:pk>/', views.trip_detail, name='trip_detail'),
+    path('trips/<int:pk>/edit/', views.trip_form, name='trip_edit'),
+    path('trips/<int:pk>/export/', views.export_passengers, name='export_passengers'),
+    path('trips/<int:pk>/update-status/', views.update_trip_status, name='update_trip_status'),
+    path('trips/<int:pk>/cancel/', views.cancel_trip, name='cancel_trip'),
+    path('trips/history/', views.trip_history, name='trip_history'),
+    
+    # AJAX/API URLs
+    path('trips/route/<int:route_id>/details/', views.get_route_details, name='route_details'),
     
 ]

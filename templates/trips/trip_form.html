@@ -1,0 +1,597 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Trip Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title-section h1 {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.25rem;
+        font-size: 1.5rem;
+    }
+    
+    .page-subtitle {
+        color: #6c757d;
+        font-size: 0.95rem;
+    }
+    
+    /* Form section styling */
+    .form-section {
+        background: white;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: #495057;
+    }
+    
+    .section-icon {
+        width: 36px;
+        height: 36px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #007bff;
+        font-size: 1.1rem;
+    }
+    
+    /* Route preview styling */
+    .route-preview {
+        background: #f8f9fa;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+        display: none;
+    }
+    
+    .route-preview.show {
+        display: block;
+    }
+    
+    .route-display {
+        font-size: 1.25rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+        color: #343a40;
+    }
+    
+    .route-info {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-align: center;
+    }
+    
+    /* Bus preview styling */
+    .bus-preview {
+        background: #f8f9fa;
+        padding: 1.25rem;
+        margin-top: 1rem;
+        border: 1px solid #e9ecef;
+        display: none;
+    }
+    
+    .bus-preview.show {
+        display: block;
+    }
+    
+    .bus-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 0.875rem;
+    }
+    
+    .bus-detail:last-child {
+        border-bottom: none;
+    }
+    
+    /* Fare section styling */
+    .fare-input-group {
+        background: #f8f9fa;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .fare-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .fare-badge {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .fare-badge.vip {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .fare-badge.business {
+        background: #e7f3ff;
+        color: #004085;
+        border: 1px solid #b3d9ff;
+    }
+    
+    .fare-badge.normal {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    /* Form elements */
+    .required-field::after {
+        content: "*";
+        color: #dc3545;
+        margin-left: 0.25rem;
+    }
+    
+    .form-help {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .time-input-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .time-separator {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-top: 1.5rem;
+    }
+    
+    /* Form switch styling */
+    .form-check.form-switch {
+        padding-left: 3rem;
+    }
+    
+    .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+    }
+    
+    /* Action buttons */
+    .form-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    /* Alert styling */
+    .alert {
+        border: 1px solid;
+        background: #f8f9fa;
+    }
+    
+    .alert-info {
+        border-color: #b3d9ff;
+        color: #004085;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .time-input-group {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .time-separator {
+            margin-top: 0;
+            transform: rotate(90deg);
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .route-display {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'trip_list' %}">Trip Management</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% if trip %}Edit Trip{% else %}Schedule Trip{% endif %}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <a href="{% url 'trip_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left me-1"></i> Back to Trips
+            </a>
+            <h1><i class="bi bi-calendar-plus text-primary"></i> {{ title }}</h1>
+            <p class="page-subtitle">Schedule a new bus trip with route, timing, and fare details</p>
+        </div>
+    </div>
+
+    <form method="post" id="tripForm">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Route & Bus Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon">
+                    <i class="bi bi-signpost-2"></i>
+                </div>
+                Route & Bus Selection
+            </h3>
+
+            <!-- Route Preview -->
+            <div id="routePreview" class="route-preview">
+                <div class="route-display">
+                    <span id="originName">--</span>
+                    <i class="bi bi-arrow-right"></i>
+                    <span id="destinationName">--</span>
+                </div>
+                <div class="route-info">
+                    <span id="routeDistance">-- km</span> • 
+                    <span id="routeDuration">-- hours</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="{{ form.route.id_for_label }}" class="form-label required-field">
+                        Select Route
+                    </label>
+                    {{ form.route }}
+                    {% if form.route.errors %}
+                    <div class="text-danger small mt-1">{{ form.route.errors }}</div>
+                    {% endif %}
+                    <div class="form-help">Choose the origin and destination for this trip</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="{{ form.bus.id_for_label }}" class="form-label required-field">
+                        Select Bus
+                    </label>
+                    {{ form.bus }}
+                    {% if form.bus.errors %}
+                    <div class="text-danger small mt-1">{{ form.bus.errors }}</div>
+                    {% endif %}
+                    <div class="form-help">Choose which bus will operate this trip</div>
+                </div>
+            </div>
+
+            <!-- Bus Preview -->
+            <div id="busPreview" class="bus-preview">
+                <strong class="d-block mb-2">Selected Bus Details:</strong>
+                <div class="bus-detail">
+                    <span>Operator:</span>
+                    <strong id="busOperator">--</strong>
+                </div>
+                <div class="bus-detail">
+                    <span>Type:</span>
+                    <strong id="busType">--</strong>
+                </div>
+                <div class="bus-detail">
+                    <span>Total Seats:</span>
+                    <strong id="busSeats">--</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon">
+                    <i class="bi bi-clock"></i>
+                </div>
+                Schedule & Timing
+            </h3>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="{{ form.departure_date.id_for_label }}" class="form-label required-field">
+                        Departure Date
+                    </label>
+                    {{ form.departure_date }}
+                    {% if form.departure_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.departure_date.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-8">
+                    <label class="form-label required-field">Departure & Arrival Time</label>
+                    <div class="time-input-group">
+                        <div class="flex-fill">
+                            <label for="{{ form.departure_time.id_for_label }}" class="form-label small text-muted">Departure Time</label>
+                            {{ form.departure_time }}
+                            {% if form.departure_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.departure_time.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="time-separator">→</div>
+                        <div class="flex-fill">
+                            <label for="{{ form.arrival_time.id_for_label }}" class="form-label small text-muted">Arrival Time</label>
+                            {{ form.arrival_time }}
+                            {% if form.arrival_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.arrival_time.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fare Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                Fare Structure
+            </h3>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="fare-input-group">
+                        <span class="fare-badge vip">VIP Class</span>
+                        <label for="{{ form.base_fare_vip.id_for_label }}" class="fare-label">
+                            Base Fare (KES)
+                        </label>
+                        {{ form.base_fare_vip }}
+                        {% if form.base_fare_vip.errors %}
+                        <div class="text-danger small mt-1">{{ form.base_fare_vip.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="fare-input-group">
+                        <span class="fare-badge business">Business Class</span>
+                        <label for="{{ form.base_fare_business.id_for_label }}" class="fare-label">
+                            Base Fare (KES)
+                        </label>
+                        {{ form.base_fare_business }}
+                        {% if form.base_fare_business.errors %}
+                        <div class="text-danger small mt-1">{{ form.base_fare_business.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="fare-input-group">
+                        <span class="fare-badge normal">Economy Class</span>
+                        <label for="{{ form.base_fare_normal.id_for_label }}" class="fare-label">
+                            Base Fare (KES)
+                        </label>
+                        {{ form.base_fare_normal }}
+                        {% if form.base_fare_normal.errors %}
+                        <div class="text-danger small mt-1">{{ form.base_fare_normal.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle me-2"></i> 
+                <strong>Tip:</strong> VIP fare should be highest, followed by Business, then Economy.
+            </div>
+        </div>
+
+        <!-- Status Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <div class="section-icon">
+                    <i class="bi bi-toggles"></i>
+                </div>
+                Trip Status
+            </h3>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">
+                        Initial Status
+                    </label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label d-block">Active Status</label>
+                    <div class="form-check form-switch">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            Trip is active and available for booking
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="{% url 'trip_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle me-1"></i> 
+                {% if trip %}Update Trip{% else %}Schedule Trip{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Route preview
+const routeSelect = document.getElementById('{{ form.route.id_for_label }}');
+const busSelect = document.getElementById('{{ form.bus.id_for_label }}');
+
+routeSelect.addEventListener('change', async function() {
+    const routeId = this.value;
+    if (!routeId) {
+        document.getElementById('routePreview').classList.remove('show');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/trips/route/${routeId}/details/`);
+        const data = await response.json();
+        
+        document.getElementById('originName').textContent = data.origin;
+        document.getElementById('destinationName').textContent = data.destination;
+        document.getElementById('routeDistance').textContent = data.distance;
+        document.getElementById('routeDuration').textContent = data.duration;
+        document.getElementById('routePreview').classList.add('show');
+    } catch (error) {
+        console.error('Error loading route details:', error);
+    }
+});
+
+// Bus preview
+busSelect.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (!this.value) {
+        document.getElementById('busPreview').classList.remove('show');
+        return;
+    }
+
+    // Extract bus details from option text (you might want to use a data attribute instead)
+    const busText = selectedOption.text;
+    document.getElementById('busOperator').textContent = 'Loading...';
+    document.getElementById('busType').textContent = 'Loading...';
+    document.getElementById('busSeats').textContent = 'Loading...';
+    document.getElementById('busPreview').classList.add('show');
+    
+    // You could make an AJAX call here to get full bus details
+});
+
+// Trigger on load if values exist
+if (routeSelect.value) {
+    routeSelect.dispatchEvent(new Event('change'));
+}
+if (busSelect.value) {
+    busSelect.dispatchEvent(new Event('change'));
+}
+
+// Fare validation
+const vipInput = document.getElementById('{{ form.base_fare_vip.id_for_label }}');
+const businessInput = document.getElementById('{{ form.base_fare_business.id_for_label }}');
+const normalInput = document.getElementById('{{ form.base_fare_normal.id_for_label }}');
+
+function validateFares() {
+    const vip = parseFloat(vipInput.value) || 0;
+    const business = parseFloat(businessInput.value) || 0;
+    const normal = parseFloat(normalInput.value) || 0;
+
+    if (business > vip && vip > 0) {
+        alert('VIP fare should be equal to or greater than Business fare');
+        return false;
+    }
+    if (normal > business && business > 0) {
+        alert('Business fare should be equal to or greater than Economy fare');
+        return false;
+    }
+    return true;
+}
+
+document.getElementById('tripForm').addEventListener('submit', function(e) {
+    if (!validateFares()) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

@@ -1128,3 +1128,433 @@ def get_layout_preview(request, pk):
         'name': layout.name,
         'total_seats': layout.total_seats,
     })
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Q, Count, Sum, Prefetch
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Trip, Bus, Route, Booking, SeatBooking, Seat
+from .forms import TripForm
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from io import BytesIO
+
+
+# ============= TRIP LIST VIEW =============
+def trip_list(request):
+    """Display all trips with filters"""
+    trips = Trip.objects.select_related(
+        'bus', 'bus__operator', 'route', 'route__origin', 'route__destination'
+    ).annotate(
+        bookings_count=Count('bookings'),
+        seats_booked=Count('bookings')  # 👈 replaced seat_bookings with bookings
+    )
+    
+    # Filters
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    route_id = request.GET.get('route', '')
+    operator_id = request.GET.get('operator', '')
+    
+    # Search by route or bus
+    if search:
+        trips = trips.filter(
+            Q(route__origin__name__icontains=search) |
+            Q(route__destination__name__icontains=search) |
+            Q(bus__bus_name__icontains=search) |
+            Q(bus__registration_number__icontains=search)
+        )
+    
+    # Filter by status
+    if status:
+        trips = trips.filter(status=status)
+    
+    # Filter by date range
+    if date_from:
+        trips = trips.filter(departure_date__gte=date_from)
+    if date_to:
+        trips = trips.filter(departure_date__lte=date_to)
+    
+    # Filter by route
+    if route_id:
+        trips = trips.filter(route_id=route_id)
+    
+    # Filter by operator
+    if operator_id:
+        trips = trips.filter(bus__operator_id=operator_id)
+    
+    # Separate upcoming and past trips
+    today = timezone.now().date()
+    upcoming_trips = trips.filter(departure_date__gte=today).order_by('departure_date', 'departure_time')
+    past_trips = trips.filter(departure_date__lt=today).order_by('-departure_date', '-departure_time')
+    
+    # Get filter options
+    from .models import Route, BusOperator
+    routes = Route.objects.filter(is_active=True)
+    operators = BusOperator.objects.filter(is_active=True)
+    
+    context = {
+        'upcoming_trips': upcoming_trips,
+        'past_trips': past_trips,
+        'routes': routes,
+        'operators': operators,
+        'search': search,
+        'selected_status': status,
+        'date_from': date_from,
+        'date_to': date_to,
+        'selected_route': route_id,
+        'selected_operator': operator_id,
+        'trip_statuses': Trip.TRIP_STATUS_CHOICES,
+    }
+    
+    return render(request, 'trips/trip_list.html', context)
+
+# ============= TRIP DETAIL VIEW =============
+
+def trip_detail(request, pk):
+    """Display detailed trip information with passenger list"""
+    trip = get_object_or_404(
+        Trip.objects.select_related(
+            'bus', 'bus__operator', 'bus__seat_layout',
+            'route', 'route__origin', 'route__destination'
+        ),
+        pk=pk
+    )
+    
+    # Get all bookings for this trip
+    bookings = Booking.objects.filter(
+        trip=trip
+    ).select_related(
+        'boarding_point', 'dropping_point'
+    ).prefetch_related(
+        Prefetch('seat_bookings', queryset=SeatBooking.objects.select_related('seat'))
+    ).order_by('-created_at')
+    
+    # Get seat availability
+    total_seats = trip.bus.seat_layout.total_seats
+    booked_seats = SeatBooking.objects.filter(
+        booking__trip=trip,
+        booking__status__in=['pending', 'confirmed', 'paid']
+    ).count()
+    available_seats = total_seats - booked_seats
+    
+    # Calculate revenue
+    total_revenue = sum(booking.total_amount for booking in bookings if booking.status in ['paid', 'confirmed'])
+    pending_revenue = sum(booking.total_amount for booking in bookings if booking.status == 'pending')
+    
+    # Get seat layout with booking status
+    seats = Seat.objects.filter(trip=trip).select_related('trip').prefetch_related(
+        Prefetch('bookings', queryset=SeatBooking.objects.select_related('booking'))
+    ).order_by('row_number', 'seat_number')
+    
+    # Group bookings by status
+    confirmed_bookings = bookings.filter(status__in=['confirmed', 'paid'])
+    pending_bookings = bookings.filter(status='pending')
+    cancelled_bookings = bookings.filter(status='cancelled')
+    
+    context = {
+        'trip': trip,
+        'bookings': bookings,
+        'confirmed_bookings': confirmed_bookings,
+        'pending_bookings': pending_bookings,
+        'cancelled_bookings': cancelled_bookings,
+        'total_seats': total_seats,
+        'booked_seats': booked_seats,
+        'available_seats': available_seats,
+        'total_revenue': total_revenue,
+        'pending_revenue': pending_revenue,
+        'seats': seats,
+        'layout_config': trip.bus.seat_layout.layout_config,
+    }
+    
+    return render(request, 'trips/trip_detail.html', context)
+
+
+# ============= EXPORT PASSENGERS TO EXCEL =============
+
+def export_passengers(request, pk):
+    """Export trip passengers to Excel"""
+    trip = get_object_or_404(
+        Trip.objects.select_related(
+            'bus', 'bus__operator', 'route', 'route__origin', 'route__destination'
+        ),
+        pk=pk
+    )
+    
+    # Get all confirmed bookings
+    bookings = Booking.objects.filter(
+        trip=trip,
+        status__in=['confirmed', 'paid']
+    ).select_related(
+        'boarding_point', 'dropping_point'
+    ).prefetch_related(
+        'seat_bookings__seat'
+    ).order_by('customer_full_name')
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Passenger List"
+    
+    # Styles
+    header_fill = PatternFill(start_color="0066CC", end_color="0066CC", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=12)
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Trip information
+    ws['A1'] = f"Passenger List - {trip.route.origin.name} to {trip.route.destination.name}"
+    ws['A1'].font = Font(bold=True, size=14)
+    ws.merge_cells('A1:G1')
+    
+    ws['A2'] = f"Bus: {trip.bus.bus_name} ({trip.bus.registration_number})"
+    ws.merge_cells('A2:G2')
+    
+    ws['A3'] = f"Date: {trip.departure_date.strftime('%B %d, %Y')} | Departure: {trip.departure_time.strftime('%I:%M %p')}"
+    ws.merge_cells('A3:G3')
+    
+    ws['A4'] = f"Operator: {trip.bus.operator.name}"
+    ws.merge_cells('A4:G4')
+    
+    ws['A5'] = f"Total Passengers: {bookings.count()}"
+    ws.merge_cells('A5:G5')
+    
+    # Headers
+    headers = ['#', 'Passenger Name', 'ID Number', 'Phone Number', 'Seat(s)', 'Boarding Point', 'Dropping Point']
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=7, column=col)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+    
+    # Data rows
+    row_num = 8
+    for index, booking in enumerate(bookings, start=1):
+        # Get seat numbers
+        seat_numbers = ', '.join([sb.seat.seat_number for sb in booking.seat_bookings.all()])
+        
+        data = [
+            index,
+            booking.customer_full_name,
+            booking.customer_id_number,
+            booking.customer_phone,
+            seat_numbers,
+            booking.boarding_point.name,
+            booking.dropping_point.name
+        ]
+        
+        for col, value in enumerate(data, start=1):
+            cell = ws.cell(row=row_num, column=col)
+            cell.value = value
+            cell.border = border
+            cell.alignment = Alignment(horizontal='left', vertical='center')
+        
+        row_num += 1
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 25
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 15
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 20
+    ws.column_dimensions['G'].width = 20
+    
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Create response
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"passengers_{trip.route.origin.name}_{trip.route.destination.name}_{trip.departure_date}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+# ============= SCHEDULE TRIP VIEW =============
+
+def trip_form(request, pk=None):
+    """Schedule a new trip or edit existing one"""
+    if pk:
+        trip = get_object_or_404(Trip, pk=pk)
+        title = f"Edit Trip: {trip.route}"
+    else:
+        trip = None
+        title = "Schedule New Trip"
+    
+    if request.method == 'POST':
+        form = TripForm(request.POST, instance=trip)
+        if form.is_valid():
+            trip = form.save(commit=False)
+            
+            # If new trip, create seats
+            if not pk:
+                trip.save()
+                create_trip_seats(trip)
+            else:
+                trip.save()
+            
+            messages.success(request, f"Trip scheduled successfully for {trip.departure_date}!")
+            return redirect('trip_detail', pk=trip.pk)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = TripForm(instance=trip)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'trip': trip,
+    }
+    
+    return render(request, 'trips/trip_form.html', context)
+
+
+def create_trip_seats(trip):
+    """Create seat instances for a trip based on bus layout"""
+    layout_config = trip.bus.seat_layout.layout_config
+    
+    if not layout_config or 'rows' not in layout_config:
+        return
+    
+    seats_to_create = []
+    for row in layout_config['rows']:
+        for seat in row['seats']:
+            seats_to_create.append(
+                Seat(
+                    trip=trip,
+                    seat_number=f"{row['row']}{seat['position']}",
+                    row_number=row['row'],
+                    seat_class=seat.get('class', 'normal'),
+                    position=seat.get('type', 'window'),
+                    is_available=True
+                )
+            )
+    
+    Seat.objects.bulk_create(seats_to_create)
+
+
+# ============= TRIP HISTORY VIEW =============
+
+def trip_history(request):
+    """Display completed and cancelled trips"""
+    trips = Trip.objects.select_related(
+        'bus', 'bus__operator', 'route', 'route__origin', 'route__destination'
+    ).annotate(
+        bookings_count=Count('bookings'),
+        total_revenue=Sum('bookings__total_amount')
+    ).filter(
+        Q(status='completed') | Q(status='cancelled') | Q(departure_date__lt=timezone.now().date())
+    ).order_by('-departure_date', '-departure_time')
+    
+    # Filters
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    month = request.GET.get('month', '')
+    year = request.GET.get('year', '')
+    
+    if search:
+        trips = trips.filter(
+            Q(route__origin__name__icontains=search) |
+            Q(route__destination__name__icontains=search) |
+            Q(bus__bus_name__icontains=search)
+        )
+    
+    if status:
+        trips = trips.filter(status=status)
+    
+    if month:
+        trips = trips.filter(departure_date__month=month)
+    
+    if year:
+        trips = trips.filter(departure_date__year=year)
+    
+    # Calculate statistics
+    total_trips = trips.count()
+    total_revenue = sum(trip.total_revenue or 0 for trip in trips)
+    completed_trips = trips.filter(status='completed').count()
+    cancelled_trips = trips.filter(status='cancelled').count()
+    
+    context = {
+        'trips': trips,
+        'search': search,
+        'selected_status': status,
+        'selected_month': month,
+        'selected_year': year,
+        'total_trips': total_trips,
+        'total_revenue': total_revenue,
+        'completed_trips': completed_trips,
+        'cancelled_trips': cancelled_trips,
+    }
+    
+    return render(request, 'trips/trip_history.html', context)
+
+
+# ============= AJAX/API VIEWS =============
+
+@require_POST
+def update_trip_status(request, pk):
+    """Update trip status"""
+    trip = get_object_or_404(Trip, pk=pk)
+    new_status = request.POST.get('status')
+    
+    if new_status in dict(Trip.TRIP_STATUS_CHOICES):
+        trip.status = new_status
+        trip.save()
+        messages.success(request, f"Trip status updated to {trip.get_status_display()}")
+    else:
+        messages.error(request, "Invalid status")
+    
+    return redirect('trip_detail', pk=pk)
+
+
+@require_POST
+def cancel_trip(request, pk):
+    """Cancel a trip"""
+    trip = get_object_or_404(Trip, pk=pk)
+    
+    if trip.status in ['completed', 'cancelled']:
+        messages.error(request, "Cannot cancel this trip")
+        return redirect('trip_detail', pk=pk)
+    
+    # Cancel all bookings
+    bookings = Booking.objects.filter(trip=trip, status__in=['pending', 'confirmed'])
+    cancelled_count = bookings.count()
+    bookings.update(status='cancelled')
+    
+    # Update trip status
+    trip.status = 'cancelled'
+    trip.save()
+    
+    messages.success(request, f"Trip cancelled. {cancelled_count} booking(s) were cancelled.")
+    return redirect('trip_detail', pk=pk)
+
+
+def get_route_details(request, route_id):
+    """Get route details for AJAX"""
+    from .models import Route
+    route = get_object_or_404(Route, pk=route_id)
+    
+    return JsonResponse({
+        'origin': route.origin.name,
+        'destination': route.destination.name,
+        'distance': str(route.distance_km),
+        'duration': str(route.estimated_duration),
+    })

@@ -1,0 +1,365 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Trip History{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+    }
+    
+    .stat-box {
+        text-align: center;
+    }
+    
+    .stat-value-large {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label-large {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .history-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+    
+    .history-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    
+    .history-header {
+        background: #f8f9fa;
+        padding: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .history-route {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #343a40;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .history-date {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .history-body {
+        padding: 1.25rem;
+    }
+    
+    .history-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .meta-box {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .meta-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #007bff;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .meta-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .status-completed {
+        background: #28a745;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-cancelled {
+        background: #dc3545;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .filter-bar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .month-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .month-btn {
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+    
+    .month-btn:hover {
+        border-color: #007bff;
+        background: #e7f3ff;
+    }
+    
+    .month-btn.active {
+        border-color: #007bff;
+        background: #007bff;
+        color: white;
+    }
+    
+    .empty-history {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px dashed #dee2e6;
+    }
+    
+    .empty-history i {
+        font-size: 4rem;
+        color: #adb5bd;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-clock-history"></i> Trip History</h2>
+            <p class="text-muted">View completed and cancelled trips</p>
+        </div>
+    </div>
+
+    <!-- Statistics Banner -->
+    <div class="stats-banner">
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-value-large">{{ total_trips }}</div>
+                <div class="stat-label-large">Total Trips</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value-large">{{ completed_trips }}</div>
+                <div class="stat-label-large">Completed</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value-large">{{ cancelled_trips }}</div>
+                <div class="stat-label-large">Cancelled</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value-large">KES {{ total_revenue|floatformat:0|default:"0" }}</div>
+                <div class="stat-label-large">Total Revenue</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+        <form method="get" id="filterForm">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search by route or bus..." value="{{ search }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All</option>
+                        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Year</label>
+                    <select name="year" class="form-select">
+                        <option value="">All Years</option>
+                        {% for year in "2024,2025,2026" %}
+                        <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Month</label>
+                    <select name="month" class="form-select">
+                        <option value="">All Months</option>
+                        <option value="1" {% if selected_month == '1' %}selected{% endif %}>January</option>
+                        <option value="2" {% if selected_month == '2' %}selected{% endif %}>February</option>
+                        <option value="3" {% if selected_month == '3' %}selected{% endif %}>March</option>
+                        <option value="4" {% if selected_month == '4' %}selected{% endif %}>April</option>
+                        <option value="5" {% if selected_month == '5' %}selected{% endif %}>May</option>
+                        <option value="6" {% if selected_month == '6' %}selected{% endif %}>June</option>
+                        <option value="7" {% if selected_month == '7' %}selected{% endif %}>July</option>
+                        <option value="8" {% if selected_month == '8' %}selected{% endif %}>August</option>
+                        <option value="9" {% if selected_month == '9' %}selected{% endif %}>September</option>
+                        <option value="10" {% if selected_month == '10' %}selected{% endif %}>October</option>
+                        <option value="11" {% if selected_month == '11' %}selected{% endif %}>November</option>
+                        <option value="12" {% if selected_month == '12' %}selected{% endif %}>December</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Trip History List -->
+    {% if trips %}
+    <div class="row">
+        {% for trip in trips %}
+        <div class="col-12">
+            <div class="history-card">
+                <div class="history-header">
+                    <div>
+                        <div class="history-route">
+                            <span>{{ trip.route.origin.name }}</span>
+                            <i class="bi bi-arrow-right text-primary"></i>
+                            <span>{{ trip.route.destination.name }}</span>
+                        </div>
+                        <div class="history-date">
+                            <i class="bi bi-calendar3"></i> {{ trip.departure_date|date:"F d, Y" }} | 
+                            <i class="bi bi-clock"></i> {{ trip.departure_time|time:"g:i A" }}
+                        </div>
+                    </div>
+                    <div>
+                        {% if trip.status == 'completed' %}
+                        <span class="status-completed">
+                            <i class="bi bi-check-circle"></i> Completed
+                        </span>
+                        {% else %}
+                        <span class="status-cancelled">
+                            <i class="bi bi-x-circle"></i> Cancelled
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="history-body">
+                    <div class="history-meta">
+                        <div class="meta-box">
+                            <div class="meta-value">{{ trip.bus.bus_name|truncatewords:2 }}</div>
+                            <div class="meta-label">Bus</div>
+                        </div>
+                        
+                        <div class="meta-box">
+                            <div class="meta-value">{{ trip.bookings_count }}</div>
+                            <div class="meta-label">Passengers</div>
+                        </div>
+                        
+                        <div class="meta-box">
+                            <div class="meta-value">
+                                {% if trip.total_revenue %}
+                                KES {{ trip.total_revenue|floatformat:0 }}
+                                {% else %}
+                                KES 0
+                                {% endif %}
+                            </div>
+                            <div class="meta-label">Revenue</div>
+                        </div>
+                        
+                        <div class="meta-box">
+                            <div class="meta-value">{{ trip.bus.operator.name|truncatewords:2 }}</div>
+                            <div class="meta-label">Operator</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'trip_detail' trip.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View Details
+                        </a>
+                        {% if trip.status == 'completed' %}
+                        <a href="{% url 'export_passengers' trip.pk %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-file-earmark-excel"></i> Export Report
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination could go here -->
+    
+    {% else %}
+    <div class="empty-history">
+        <i class="bi bi-clock-history"></i>
+        <h3 class="text-muted">No Trip History Found</h3>
+        <p class="text-muted">Completed and cancelled trips will appear here</p>
+        <a href="{% url 'trip_list' %}" class="btn btn-primary mt-3">
+            <i class="bi bi-calendar3"></i> View All Trips
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit on filter change
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', () => {
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>
+{% endblock %}
