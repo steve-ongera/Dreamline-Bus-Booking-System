@@ -22,6 +22,33 @@
         padding: 6rem 0 4rem;
     }
 
+     .hero-carousel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+    }
+
+    .hero-carousel .carousel-inner,
+    .hero-carousel .carousel-item,
+    .hero-bg-img {
+        height: 100%;
+    }
+
+    .hero-bg-img {
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+        filter: brightness(65%) contrast(105%);
+        transition: transform 8s ease-in-out;
+    }
+
+    .hero-carousel .carousel-item.active .hero-bg-img {
+        transform: scale(1.05);
+    }
+
     .hero-pattern {
         position: absolute;
         top: 0;
@@ -313,12 +340,67 @@
         position: relative;
     }
 
-    .about-image {
+    .about-carousel {
         border-radius: 20px;
+        overflow: hidden;
         box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-        width: 100%;
+    }
+
+    .about-carousel .carousel-inner {
+        border-radius: 20px;
+    }
+
+    .about-carousel .carousel-item {
         height: 500px;
+    }
+
+    .about-image {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
+    }
+
+    .about-carousel .carousel-control-prev,
+    .about-carousel .carousel-control-next {
+        width: 50px;
+        height: 50px;
+        background: rgba(230, 57, 70, 0.8);
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 1;
+    }
+
+    .about-carousel .carousel-control-prev {
+        left: 1rem;
+    }
+
+    .about-carousel .carousel-control-next {
+        right: 1rem;
+    }
+
+    .about-carousel .carousel-control-prev:hover,
+    .about-carousel .carousel-control-next:hover {
+        background: var(--primary-color);
+    }
+
+    .about-carousel .carousel-indicators {
+        bottom: 1.5rem;
+    }
+
+    .about-carousel .carousel-indicators button {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.6);
+        border: none;
+        margin: 0 5px;
+    }
+
+    .about-carousel .carousel-indicators button.active {
+        background-color: var(--primary-color);
+        width: 30px;
+        border-radius: 5px;
     }
 
     .about-image-badge {
@@ -330,6 +412,7 @@
         border-radius: 16px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         text-align: center;
+        z-index: 10;
     }
 
     .badge-number {
@@ -483,8 +566,11 @@
             font-size: 2rem;
         }
 
-        .about-image {
+        .about-carousel .carousel-item {
             height: 400px;
+        }
+        
+        .about-image-wrapper {
             margin-bottom: 2rem;
         }
 
@@ -519,7 +605,7 @@
             font-size: 1.75rem;
         }
 
-        .about-image {
+        .about-carousel .carousel-item {
             height: 350px;
         }
 
@@ -549,7 +635,7 @@
             padding: 0.875rem 1.5rem;
         }
 
-        .about-image {
+        .about-carousel .carousel-item {
             height: 300px;
         }
 
@@ -567,10 +653,28 @@
 {% endblock %}
 
 {% block search_bar %}
+
+
 <!-- Hero Section with Transparent Search -->
 <section class="hero-section">
-    <div class="hero-pattern"></div>
     
+    <!-- Background Carousel -->
+    <div id="heroBackgroundCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <img src="{% static 'images/bus-1.png' %}" class="d-block w-100 hero-bg-img" alt="Luxury Bus">
+            </div>
+            <div class="carousel-item">
+                <img src="{% static 'images/bus-2.png' %}" class="d-block w-100 hero-bg-img" alt="Comfort Travel">
+            </div>
+            <div class="carousel-item">
+                <img src="{% static 'images/bus-2.png' %}" class="d-block w-100 hero-bg-img" alt="Kenya Routes">
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-pattern"></div>
+
     <div class="container">
         <div class="hero-content-main">
             <div class="row align-items-center">
@@ -580,7 +684,9 @@
                             <i class="bi bi-star-fill me-2"></i>Kenya's Premier Bus Service
                         </span>
                         <h1 class="hero-main-title">Travel Smart, Travel Comfortable</h1>
-                        <p class="hero-main-subtitle">Experience the best of Kenyan bus travel with modern buses, professional drivers, and unmatched comfort on every journey.</p>
+                        <p class="hero-main-subtitle">
+                            Experience the best of Kenyan bus travel with modern buses, professional drivers, and unmatched comfort on every journey.
+                        </p>
                     </div>
                 </div>
 
@@ -591,8 +697,9 @@
                                 <h3 class="search-title">Book Your Journey</h3>
                                 <p class="search-subtitle">Safe, comfortable, and reliable bus travel</p>
                             </div>
-                            
-                            <form id="searchForm">
+
+                            <!-- Keep your form as is -->
+                             <form id="searchForm">
                                 <div class="search-input-wrapper-transparent">
                                     <label class="form-label-transparent">From</label>
                                     <input type="text" 
@@ -657,6 +764,7 @@
                                     <span class="stat-label-transparent">Support</span>
                                 </div>
                             </div>
+                            <!-- ... -->
                         </div>
                     </div>
                 </div>
@@ -664,6 +772,7 @@
         </div>
     </div>
 </section>
+
 {% endblock %}
 
 {% block content %}
@@ -701,7 +810,31 @@
             
             <div class="col-lg-6">
                 <div class="about-image-wrapper">
-                    <img src="{% static 'images/bus-1.png' %}" alt="DreamLine Bus" class="about-image">
+                    <!-- Carousel for About Images -->
+                    <div id="aboutCarousel" class="carousel slide about-carousel" data-bs-ride="carousel">
+                        <div class="carousel-indicators">
+                            <button type="button" data-bs-target="#aboutCarousel" data-bs-slide-to="0" class="active"></button>
+                            <button type="button" data-bs-target="#aboutCarousel" data-bs-slide-to="1"></button>
+                            <button type="button" data-bs-target="#aboutCarousel" data-bs-slide-to="2"></button>
+                        </div>
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{% static 'images/bus-1.png' %}" class="about-image d-block w-100" alt="DreamLine Modern Fleet">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/bus-2.png' %}" class="about-image d-block w-100" alt="Comfortable Interior">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/bus-1.png' %}" class="about-image d-block w-100" alt="Professional Service">
+                            </div>
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#aboutCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#aboutCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon"></span>
+                        </button>
+                    </div>
                     <div class="about-image-badge">
                         <span class="badge-number">50K+</span>
                         <span class="badge-text">Happy Travelers</span>
@@ -883,8 +1016,8 @@ $(document).ready(function() {
         }
     });
     
-       // Form submission
-    $('#searchForm').submit(function(e) {
+    // Form submission
+   $('#searchForm').submit(function(e) {
         e.preventDefault();
         
         const fromId = $('#fromLocationId').val();
