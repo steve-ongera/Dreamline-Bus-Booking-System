@@ -1,51 +1,114 @@
+
 {% extends 'admin_base.html' %}
 {% load static %}
 
-{% block title %}Trip History{% endblock %}
+{% block title %}Trip History - Trip Management{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.75rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0.5rem 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #495057;
+    }
+    
+    .breadcrumb-item.active {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    /* Page header styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #343a40;
+        margin: 0;
+    }
+    
+    /* Statistics banner */
     .stats-banner {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 12px;
-        margin-bottom: 2rem;
+        background: #f8f9fa;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
     }
     
     .stats-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
     }
     
     .stat-box {
         text-align: center;
+        padding: 1rem;
+        background: white;
+        border: 1px solid #e9ecef;
     }
     
     .stat-value-large {
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: 700;
         line-height: 1;
         margin-bottom: 0.5rem;
+        color: #343a40;
     }
     
     .stat-label-large {
         font-size: 0.875rem;
-        opacity: 0.9;
+        color: #6c757d;
+        font-weight: 500;
     }
     
+    /* Filter bar */
+    .filter-bar {
+        background: white;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    /* History card styling */
     .history-card {
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
         margin-bottom: 1rem;
-        overflow: hidden;
         transition: all 0.2s;
     }
     
     .history-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     
     .history-header {
@@ -54,21 +117,25 @@
         border-bottom: 1px solid #e9ecef;
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
     }
     
     .history-route {
-        font-size: 1.125rem;
+        font-size: 1.1rem;
         font-weight: 600;
         color: #343a40;
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        margin-bottom: 0.5rem;
     }
     
     .history-date {
         color: #6c757d;
         font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     
     .history-body {
@@ -78,7 +145,7 @@
     .history-meta {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 1.5rem;
+        gap: 1rem;
         margin-bottom: 1rem;
     }
     
@@ -86,11 +153,11 @@
         text-align: center;
         padding: 0.75rem;
         background: #f8f9fa;
-        border-radius: 8px;
+        border: 1px solid #e9ecef;
     }
     
     .meta-value {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 700;
         color: #007bff;
         line-height: 1;
@@ -100,87 +167,82 @@
     .meta-label {
         font-size: 0.75rem;
         color: #6c757d;
-    }
-    
-    .status-completed {
-        background: #28a745;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    
-    .status-cancelled {
-        background: #dc3545;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    
-    .filter-bar {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        margin-bottom: 2rem;
-    }
-    
-    .month-selector {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-        gap: 0.5rem;
-    }
-    
-    .month-btn {
-        padding: 0.75rem;
-        border: 2px solid #e9ecef;
-        background: white;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: center;
         font-weight: 500;
-        font-size: 0.875rem;
     }
     
-    .month-btn:hover {
-        border-color: #007bff;
-        background: #e7f3ff;
+    /* Status badges */
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+        font-weight: 600;
     }
     
-    .month-btn.active {
-        border-color: #007bff;
-        background: #007bff;
-        color: white;
-    }
-    
-    .empty-history {
+    /* Empty state styling */
+    .empty-state {
+        padding: 3rem 1.5rem;
         text-align: center;
-        padding: 4rem 2rem;
-        background: #f8f9fa;
-        border-radius: 12px;
-        border: 1px dashed #dee2e6;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
     }
     
-    .empty-history i {
-        font-size: 4rem;
+    .empty-state-icon {
+        font-size: 3rem;
         color: #adb5bd;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .history-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        
+        .history-route {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .history-meta {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .stats-row {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="bi bi-clock-history"></i> Trip History</h2>
-            <p class="text-muted">View completed and cancelled trips</p>
-        </div>
+<!-- Breadcrumb -->
+<div class="breadcrumb-container">
+    <div class="container-fluid">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'trip_list' %}">Trip Management</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Trip History</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="bi bi-clock-history text-primary"></i>
+            Trip History
+        </h1>
     </div>
 
     <!-- Statistics Banner -->
@@ -208,17 +270,22 @@
     <!-- Filters -->
     <div class="filter-bar">
         <form method="get" id="filterForm">
-            <div class="row g-3 mb-3">
+            <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" 
-                           placeholder="Search by route or bus..." value="{{ search }}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Search by route or bus..." value="{{ search }}">
+                    </div>
                 </div>
                 
                 <div class="col-md-2">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
-                        <option value="">All</option>
+                        <option value="">All Status</option>
                         <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
                         <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
                     </select>
@@ -234,7 +301,7 @@
                     </select>
                 </div>
                 
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Month</label>
                     <select name="month" class="form-select">
                         <option value="">All Months</option>
@@ -253,9 +320,9 @@
                     </select>
                 </div>
                 
-                <div class="col-md-1 d-flex align-items-end">
+                <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i>
+                        <i class="bi bi-funnel me-1"></i> Filter
                     </button>
                 </div>
             </div>
@@ -272,22 +339,22 @@
                     <div>
                         <div class="history-route">
                             <span>{{ trip.route.origin.name }}</span>
-                            <i class="bi bi-arrow-right text-primary"></i>
+                            <i class="bi bi-arrow-right text-muted"></i>
                             <span>{{ trip.route.destination.name }}</span>
                         </div>
                         <div class="history-date">
-                            <i class="bi bi-calendar3"></i> {{ trip.departure_date|date:"F d, Y" }} | 
-                            <i class="bi bi-clock"></i> {{ trip.departure_time|time:"g:i A" }}
+                            <i class="bi bi-calendar3 me-1"></i> {{ trip.departure_date|date:"F d, Y" }}
+                            <i class="bi bi-clock me-1 ms-2"></i> {{ trip.departure_time|time:"g:i A" }}
                         </div>
                     </div>
                     <div>
                         {% if trip.status == 'completed' %}
-                        <span class="status-completed">
-                            <i class="bi bi-check-circle"></i> Completed
+                        <span class="badge bg-success status-badge">
+                            <i class="bi bi-check-circle me-1"></i> Completed
                         </span>
                         {% else %}
-                        <span class="status-cancelled">
-                            <i class="bi bi-x-circle"></i> Cancelled
+                        <span class="badge bg-danger status-badge">
+                            <i class="bi bi-x-circle me-1"></i> Cancelled
                         </span>
                         {% endif %}
                     </div>
@@ -324,11 +391,11 @@
 
                     <div class="d-flex gap-2">
                         <a href="{% url 'trip_detail' trip.pk %}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye"></i> View Details
+                            <i class="bi bi-eye me-1"></i> View Details
                         </a>
                         {% if trip.status == 'completed' %}
                         <a href="{% url 'export_passengers' trip.pk %}" class="btn btn-outline-success btn-sm">
-                            <i class="bi bi-file-earmark-excel"></i> Export Report
+                            <i class="bi bi-file-earmark-excel me-1"></i> Export Report
                         </a>
                         {% endif %}
                     </div>
@@ -341,12 +408,14 @@
     <!-- Pagination could go here -->
     
     {% else %}
-    <div class="empty-history">
-        <i class="bi bi-clock-history"></i>
-        <h3 class="text-muted">No Trip History Found</h3>
-        <p class="text-muted">Completed and cancelled trips will appear here</p>
-        <a href="{% url 'trip_list' %}" class="btn btn-primary mt-3">
-            <i class="bi bi-calendar3"></i> View All Trips
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <h4 class="text-muted">No Trip History Found</h4>
+        <p class="text-muted mb-3">Completed and cancelled trips will appear here</p>
+        <a href="{% url 'trip_list' %}" class="btn btn-primary">
+            <i class="bi bi-calendar3 me-1"></i> View All Trips
         </a>
     </div>
     {% endif %}
