@@ -1,10 +1,86 @@
 {% extends 'admin_base.html' %}
 {% load static %}
 
-{% block title %}Analytics Dashboard - Bus Booking Admin{% endblock %}
+{% block title %}Analytics Dashboard - Advanced Reports{% endblock %}
 
 {% block extra_css %}
 <style>
+    .filters-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #666;
+    }
+    
+    .form-select, .form-control {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+    
+    .btn-filter {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.625rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-export {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        background: white;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        color: #1a1a1a;
+    }
+    
+    .btn-export:hover {
+        border-color: #667eea;
+        color: #667eea;
+        background: #f8f9ff;
+    }
+    
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -21,61 +97,35 @@
         overflow: hidden;
     }
     
-    .kpi-card::after {
+    .kpi-card::before {
         content: '';
         position: absolute;
-        bottom: 0;
-        right: 0;
-        width: 100px;
-        height: 100px;
-        opacity: 0.05;
-        font-size: 80px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
     }
     
-    .kpi-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        margin-bottom: 1rem;
-    }
+    .kpi-card.green::before { background: #4caf50; }
+    .kpi-card.blue::before { background: #2196f3; }
+    .kpi-card.purple::before { background: #9c27b0; }
+    .kpi-card.orange::before { background: #ff9800; }
     
     .kpi-icon {
-        width: 48px;
-        height: 48px;
+        width: 56px;
+        height: 56px;
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 28px;
+        margin-bottom: 1rem;
     }
     
-    .kpi-card.revenue .kpi-icon {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        color: white;
-    }
-    
-    .kpi-card.bookings .kpi-icon {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .kpi-card.customers .kpi-icon {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        color: white;
-    }
-    
-    .kpi-card.occupancy .kpi-icon {
-        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-        color: white;
-    }
-    
-    .kpi-card.rating .kpi-icon {
-        background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
-        color: white;
-    }
+    .kpi-card.green .kpi-icon { background: #e8f5e9; color: #4caf50; }
+    .kpi-card.blue .kpi-icon { background: #e3f2fd; color: #2196f3; }
+    .kpi-card.purple .kpi-icon { background: #f3e5f5; color: #9c27b0; }
+    .kpi-card.orange .kpi-icon { background: #fff3e0; color: #ff9800; }
     
     .kpi-value {
         font-size: 2rem;
@@ -87,7 +137,7 @@
     .kpi-label {
         color: #666;
         font-size: 0.875rem;
-        margin: 0;
+        margin-bottom: 0.5rem;
     }
     
     .kpi-change {
@@ -98,7 +148,6 @@
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 600;
-        margin-top: 0.5rem;
     }
     
     .kpi-change.positive {
@@ -111,7 +160,7 @@
         color: #721c24;
     }
     
-    .chart-section {
+    .chart-container {
         background: white;
         border-radius: 12px;
         padding: 1.5rem;
@@ -121,198 +170,102 @@
     
     .chart-header {
         display: flex;
-        justify-content: between;
+        justify-content: space-between;
         align-items: center;
         margin-bottom: 1.5rem;
     }
     
-    .chart-header h3 {
+    .chart-title {
         font-size: 1.125rem;
         font-weight: 600;
         color: #1a1a1a;
-        margin: 0;
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        margin: 0;
     }
     
-    .chart-header h3 i {
+    .chart-title i {
         font-size: 1.5rem;
         color: #667eea;
     }
     
-    .top-items {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+    .chart-canvas {
+        position: relative;
+        height: 350px;
     }
     
-    .top-item {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem;
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th {
         background: #f8f9fa;
-        border-radius: 8px;
-        transition: all 0.2s;
-    }
-    
-    .top-item:hover {
-        background: #e9ecef;
-        transform: translateX(5px);
-    }
-    
-    .item-rank {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        flex-shrink: 0;
-    }
-    
-    .item-rank.gold {
-        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-    }
-    
-    .item-rank.silver {
-        background: linear-gradient(135deg, #c0c0c0 0%, #808080 100%);
-    }
-    
-    .item-rank.bronze {
-        background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
-    }
-    
-    .item-info {
-        flex: 1;
-    }
-    
-    .item-name {
+        padding: 0.75rem 1rem;
+        text-align: left;
         font-weight: 600;
-        color: #1a1a1a;
-        margin-bottom: 0.25rem;
-    }
-    
-    .item-details {
-        font-size: 0.8125rem;
-        color: #666;
-    }
-    
-    .item-metric {
-        text-align: right;
-    }
-    
-    .item-value {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #1a1a1a;
-    }
-    
-    .item-subvalue {
-        font-size: 0.8125rem;
-        color: #666;
-    }
-    
-    .review-card {
-        display: flex;
-        gap: 1rem;
-        padding: 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-    
-    .review-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 1.125rem;
-        flex-shrink: 0;
-    }
-    
-    .review-content {
-        flex: 1;
-    }
-    
-    .review-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-    
-    .review-author {
-        font-weight: 600;
-        color: #1a1a1a;
-    }
-    
-    .review-stars {
-        display: flex;
-        gap: 0.25rem;
-    }
-    
-    .review-stars i {
-        color: #ffd700;
-        font-size: 1rem;
-    }
-    
-    .review-text {
         font-size: 0.875rem;
         color: #666;
-        line-height: 1.5;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e0e0e0;
     }
     
-    .amenity-item {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem;
+    .data-table td {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 0.875rem;
+    }
+    
+    .data-table tr:hover {
         background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 0.75rem;
     }
     
-    .amenity-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        background: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
+    .progress-bar-container {
+        background: #f5f5f5;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 0.25rem;
     }
     
-    .amenity-info {
-        flex: 1;
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 3px;
+        transition: width 0.3s ease;
     }
     
-    .amenity-name {
+    .badge-method {
+        padding: 0.25rem 0.625rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: #1a1a1a;
+        display: inline-block;
     }
     
-    .amenity-count {
-        font-size: 0.8125rem;
-        color: #666;
-    }
-    
-    .stats-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
+    .badge-method.mpesa { background: #d4edda; color: #155724; }
+    .badge-method.card { background: #d1ecf1; color: #0c5460; }
+    .badge-method.cash { background: #fff3cd; color: #856404; }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 {% endblock %}
 
 {% block content %}
@@ -320,218 +273,508 @@
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1 fw-bold">Analytics Dashboard</h1>
-            <p class="text-muted mb-0">Comprehensive business insights and performance metrics</p>
+            <h1 class="h3 mb-1 fw-bold"> Analytics Dashboard</h1>
+            <p class="text-muted mb-0">Comprehensive analtic insights with advanced filtering</p>
+        </div>
+        <div class="export-buttons">
+            <a href="?{{ request.GET.urlencode }}&export=csv" class="btn-export">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Export CSV
+            </a>
+            <a href="?{{ request.GET.urlencode }}&export=json" class="btn-export">
+                <i class="bi bi-file-earmark-code"></i>
+                Export JSON
+            </a>
+            <a href="?{{ request.GET.urlencode }}&export=pdf" class="btn-export">
+                <i class="bi bi-file-earmark-pdf"></i>
+                Export PDF
+            </a>
         </div>
     </div>
     
-    <!-- Key Performance Indicators -->
-    <div class="kpi-grid">
-        <div class="kpi-card revenue">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-icon">
-                        <i class="bi bi-currency-dollar"></i>
-                    </div>
+    <!-- Advanced Filters -->
+    <div class="filters-card">
+        <form method="get" action="">
+            <div class="filters-grid">
+                <!-- Period Selection -->
+                <div class="filter-group">
+                    <label class="filter-label">Time Period</label>
+                    <select name="period" class="form-select" onchange="toggleCustomDates(this)">
+                        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                        <option value="week" {% if period == 'week' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="last_week" {% if period == 'last_week' %}selected{% endif %}>Previous Week</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                        <option value="last_month" {% if period == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>This Quarter</option>
+                        <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                        <option value="last_year" {% if period == 'last_year' %}selected{% endif %}>Last Year</option>
+                        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
                 </div>
-            </div>
-            <div class="kpi-value">KES {{ total_revenue|floatformat:0 }}</div>
-            <p class="kpi-label">Total Revenue</p>
-            <span class="kpi-change positive">
-                <i class="bi bi-arrow-up"></i>
-                Last 30 days: KES {{ revenue_last_30|floatformat:0 }}
-            </span>
-        </div>
-        
-        <div class="kpi-card bookings">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-icon">
-                        <i class="bi bi-ticket-detailed"></i>
-                    </div>
+                
+                <!-- Custom Date Range -->
+                <div class="filter-group" id="customDates" style="display: {% if period == 'custom' %}block{% else %}none{% endif %};">
+                    <label class="filter-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
                 </div>
-            </div>
-            <div class="kpi-value">{{ total_bookings }}</div>
-            <p class="kpi-label">Total Bookings</p>
-            <span class="kpi-change positive">
-                <i class="bi bi-arrow-up"></i>
-                Last 30 days: {{ bookings_last_30 }}
-            </span>
-        </div>
-        
-        <div class="kpi-card customers">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-icon">
-                        <i class="bi bi-people"></i>
-                    </div>
+                
+                <div class="filter-group" id="customDatesEnd" style="display: {% if period == 'custom' %}block{% else %}none{% endif %};">
+                    <label class="filter-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
                 </div>
-            </div>
-            <div class="kpi-value">{{ total_customers }}</div>
-            <p class="kpi-label">Total Customers</p>
-        </div>
-        
-        <div class="kpi-card occupancy">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-icon">
-                        <i class="bi bi-clipboard-data"></i>
-                    </div>
+                
+                <!-- Operator Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Bus Operator</label>
+                    <select name="operator" class="form-select">
+                        <option value="">All Operators</option>
+                        {% for operator in operators %}
+                        <option value="{{ operator.id }}" {% if selected_operator == operator.id|stringformat:"s" %}selected{% endif %}>
+                            {{ operator.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
-            <div class="kpi-value">{{ occupancy_rate }}%</div>
-            <p class="kpi-label">Occupancy Rate</p>
-        </div>
-        
-        <div class="kpi-card rating">
-            <div class="kpi-header">
-                <div>
-                    <div class="kpi-icon">
-                        <i class="bi bi-star-fill"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="kpi-value">{{ avg_rating }}</div>
-            <p class="kpi-label">Average Rating</p>
-        </div>
-    </div>
-    
-    <!-- Charts Row -->
-    <div class="stats-row">
-        <!-- Top Performing Routes -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h3>
-                    <i class="bi bi-signpost-2"></i>
-                    Top Routes
-                </h3>
-            </div>
-            
-            <div class="top-items">
-                {% for route in top_routes %}
-                <div class="top-item">
-                    <div class="item-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
-                        {{ forloop.counter }}
-                    </div>
-                    <div class="item-info">
-                        <div class="item-name">
+                
+                <!-- Route Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Route</label>
+                    <select name="route" class="form-select">
+                        <option value="">All Routes</option>
+                        {% for route in routes %}
+                        <option value="{{ route.id }}" {% if selected_route == route.id|stringformat:"s" %}selected{% endif %}>
                             {{ route.origin.name }} → {{ route.destination.name }}
-                        </div>
-                        <div class="item-details">
-                            {{ route.booking_count }} bookings
-                        </div>
-                    </div>
-                    <div class="item-metric">
-                        <div class="item-value">KES {{ route.revenue|floatformat:0 }}</div>
-                        <div class="item-subvalue">Revenue</div>
-                    </div>
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
-                {% empty %}
-                <p class="text-muted text-center py-3">No route data available</p>
-                {% endfor %}
+                
+                <!-- Payment Method Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Payment Method</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="">All Methods</option>
+                        {% for method in payment_methods %}
+                        <option value="{{ method }}" {% if selected_payment_method == method %}selected{% endif %}>
+                            {{ method|upper }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Bus Type Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Bus Type</label>
+                    <select name="bus_type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for bus_type in bus_types %}
+                        <option value="{{ bus_type }}" {% if selected_bus_type == bus_type %}selected{% endif %}>
+                            {{ bus_type|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted small">
+                    <i class="bi bi-calendar-range me-2"></i>
+                    Showing: <strong>{{ date_from|date:"M d, Y" }}</strong> to <strong>{{ date_to|date:"M d, Y" }}</strong>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                    <button type="submit" class="btn-filter">
+                        <i class="bi bi-funnel me-2"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card green">
+            <div class="kpi-icon">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <p class="kpi-label">Total Revenue</p>
+            <div class="kpi-value">KES {{ total_revenue|floatformat:2|default:"0.00" }}</div>
+            {% if revenue_change != 0 %}
+            <span class="kpi-change {% if revenue_change > 0 %}positive{% else %}negative{% endif %}">
+                <i class="bi bi-arrow-{% if revenue_change > 0 %}up{% else %}down{% endif %}"></i>
+                {{ revenue_change|floatformat:1 }}% vs previous period
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="kpi-card blue">
+            <div class="kpi-icon">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <p class="kpi-label">Total Transactions</p>
+            <div class="kpi-value">{{ total_transactions }}</div>
+        </div>
+        
+        <div class="kpi-card purple">
+            <div class="kpi-icon">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <p class="kpi-label">Average Transaction</p>
+            <div class="kpi-value">KES {{ average_transaction|floatformat:2 }}</div>
+        </div>
+        
+        <div class="kpi-card orange">
+            <div class="kpi-icon">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <p class="kpi-label">Previous Period</p>
+            <div class="kpi-value">KES {{ prev_revenue|floatformat:2 }}</div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 1: Line Chart (Revenue Trend) -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">
+                <i class="bi bi-graph-up"></i>
+                Daily Revenue Trend
+            </h3>
+        </div>
+        <div class="chart-canvas">
+            <canvas id="revenueLineChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Charts Row 2: Bar Charts -->
+    <div class="stats-grid">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-bar-chart"></i>
+                    Hourly Distribution
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="hourlyBarChart"></canvas>
             </div>
         </div>
         
-        <!-- Top Performing Buses -->
-        <div class="chart-section">
+        <div class="chart-container">
             <div class="chart-header">
-                <h3>
-                    <i class="bi bi-bus-front"></i>
-                    Top Buses
+                <h3 class="chart-title">
+                    <i class="bi bi-calendar-week"></i>
+                    Day of Week Analysis
                 </h3>
             </div>
-            
-            <div class="top-items">
-                {% for bus in top_buses %}
-                <div class="top-item">
-                    <div class="item-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
-                        {{ forloop.counter }}
-                    </div>
-                    <div class="item-info">
-                        <div class="item-name">{{ bus.bus_name }}</div>
-                        <div class="item-details">
-                            {{ bus.operator.name }} • {{ bus.trip_count }} trips
-                        </div>
-                    </div>
-                    <div class="item-metric">
-                        <div class="item-value">KES {{ bus.revenue|floatformat:0 }}</div>
-                        <div class="item-subvalue">Revenue</div>
-                    </div>
-                </div>
-                {% empty %}
-                <p class="text-muted text-center py-3">No bus data available</p>
-                {% endfor %}
+            <div class="chart-canvas">
+                <canvas id="dayOfWeekChart"></canvas>
             </div>
         </div>
     </div>
     
-    <!-- Recent Reviews and Amenities -->
-    <div class="stats-row">
-        <!-- Recent Reviews -->
-        <div class="chart-section">
+    <!-- Charts Row 3: Donut Charts -->
+    <div class="stats-grid">
+        <div class="chart-container">
             <div class="chart-header">
-                <h3>
-                    <i class="bi bi-star"></i>
-                    Recent Reviews
+                <h3 class="chart-title">
+                    <i class="bi bi-pie-chart"></i>
+                    Payment Methods
                 </h3>
             </div>
-            
-            {% for review in recent_reviews %}
-            <div class="review-card">
-                <div class="review-avatar">
-                    {{ review.booking.customer_full_name|slice:":1"|upper }}
-                </div>
-                <div class="review-content">
-                    <div class="review-header">
-                        <span class="review-author">{{ review.booking.customer_full_name }}</span>
-                        <div class="review-stars">
-                            {% for i in "12345" %}
-                                {% if forloop.counter <= review.rating %}
-                                    <i class="bi bi-star-fill"></i>
-                                {% else %}
-                                    <i class="bi bi-star"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="review-text">
-                        {% if review.comment %}
-                            {{ review.comment|truncatewords:20 }}
-                        {% else %}
-                            No comment provided.
-                        {% endif %}
-                    </div>
-                    <small class="text-muted">{{ review.bus.bus_name }} • {{ review.created_at|timesince }} ago</small>
-                </div>
+            <div class="chart-canvas">
+                <canvas id="paymentMethodDonut"></canvas>
             </div>
-            {% empty %}
-            <p class="text-muted text-center py-3">No reviews yet</p>
-            {% endfor %}
         </div>
         
-        <!-- Popular Amenities -->
-        <div class="chart-section">
+        <div class="chart-container">
             <div class="chart-header">
-                <h3>
-                    <i class="bi bi-puzzle"></i>
-                    Popular Amenities
+                <h3 class="chart-title">
+                    <i class="bi bi-pie-chart-fill"></i>
+                    Seat Class Distribution
                 </h3>
             </div>
-            
-            {% for amenity in popular_amenities %}
-            <div class="amenity-item">
-                <div class="amenity-icon">
-                    {{ amenity.icon|safe }}
-                </div>
-                <div class="amenity-info">
-                    <div class="amenity-name">{{ amenity.name }}</div>
-                    <div class="amenity-count">Available on {{ amenity.bus_count }} buses</div>
-                </div>
+            <div class="chart-canvas">
+                <canvas id="seatClassDonut"></canvas>
             </div>
-            {% empty %}
-            <p class="text-muted text-center py-3">No amenities configured</p>
-            {% endfor %}
         </div>
+    </div>
+    
+    <!-- Data Tables -->
+    <div class="stats-grid">
+        <!-- Revenue by Operator -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-building"></i>
+                    Top Operators
+                </h3>
+            </div>
+            {% if revenue_by_operator %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Bookings</th>
+                        <th>Revenue</th>
+                        <th>Share</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for operator in revenue_by_operator|slice:":5" %}
+                    <tr>
+                        <td><strong>{{ operator.operator_name }}</strong></td>
+                        <td>{{ operator.count }}</td>
+                        <td class="text-success fw-bold">KES {{ operator.total|floatformat:2 }}</td>
+                        <td>
+                            {{ operator.percentage|floatformat:1 }}%
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: {{ operator.percentage }}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4">No operator data available</p>
+            {% endif %}
+        </div>
+        
+        <!-- Revenue by Payment Method -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-credit-card"></i>
+                    Payment Methods
+                </h3>
+            </div>
+            {% if revenue_by_method %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Transactions</th>
+                        <th>Revenue</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for method in revenue_by_method %}
+                    <tr>
+                        <td>
+                            <span class="badge-method {{ method.payment_method }}">
+                                {{ method.payment_method|upper }}
+                            </span>
+                        </td>
+                        <td>{{ method.count }}</td>
+                        <td class="text-success fw-bold">KES {{ method.total|floatformat:2 }}</td>
+                        <td>{{ method.percentage|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4">No payment data available</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Top Routes Table -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">
+                <i class="bi bi-signpost-2"></i>
+                Top Revenue Routes
+            </h3>
+        </div>
+        {% if revenue_by_route %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Route</th>
+                    <th>Bookings</th>
+                    <th>Total Revenue</th>
+                    <th>Avg/Booking</th>
+                    <th>Revenue/KM</th>
+                    <th>Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for route in revenue_by_route|slice:":10" %}
+                <tr>
+                    <td>
+                        <strong>{{ route.origin }}</strong>
+                        <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                        <strong>{{ route.destination }}</strong>
+                    </td>
+                    <td>{{ route.count }}</td>
+                    <td class="text-success fw-bold">KES {{ route.total|floatformat:2 }}</td>
+                    <td>KES {{ route.avg|floatformat:2 }}</td>
+                    <td>KES {{ route.revenue_per_km|floatformat:2 }}</td>
+                    <td>
+                        {{ route.percentage|floatformat:1 }}%
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {{ route.percentage }}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No route data available</p>
+        {% endif %}
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Parse chart data from Django context
+    const chartData = {{ chart_data|safe }};
+    
+    // Common chart options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            }
+        }
+    };
+    
+    // 1. Daily Revenue Line Chart
+    new Chart(document.getElementById('revenueLineChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.daily_labels,
+            datasets: [{
+                label: 'Revenue (KES)',
+                data: chartData.daily_revenue,
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // 2. Hourly Distribution Bar Chart
+    new Chart(document.getElementById('hourlyBarChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.hourly_labels,
+            datasets: [{
+                label: 'Revenue (KES)',
+                data: chartData.hourly_data,
+                backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                borderColor: 'rgb(102, 126, 234)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 3. Day of Week Chart
+    new Chart(document.getElementById('dayOfWeekChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.day_labels,
+            datasets: [{
+                label: 'Revenue (KES)',
+                data: chartData.day_data,
+                backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                borderColor: 'rgb(76, 175, 80)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 4. Payment Method Donut Chart
+    new Chart(document.getElementById('paymentMethodDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: chartData.method_labels,
+            datasets: [{
+                data: chartData.method_data,
+                backgroundColor: [
+                    'rgba(76, 175, 80, 0.8)',
+                    'rgba(33, 150, 243, 0.8)',
+                    'rgba(255, 152, 0, 0.8)',
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            ...commonOptions,
+            cutout: '70%'
+        }
+    });
+    
+    // 5. Seat Class Donut Chart
+    new Chart(document.getElementById('seatClassDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: chartData.seat_class_labels,
+            datasets: [{
+                data: chartData.seat_class_data,
+                backgroundColor: [
+                    'rgba(156, 39, 176, 0.8)',
+                    'rgba(33, 150, 243, 0.8)',
+                    'rgba(102, 126, 234, 0.8)',
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            ...commonOptions,
+            cutout: '70%'
+        }
+    });
+    
+    // Toggle custom date fields
+    function toggleCustomDates(select) {
+        const customDates = document.getElementById('customDates');
+        const customDatesEnd = document.getElementById('customDatesEnd');
+        if (select.value === 'custom') {
+            customDates.style.display = 'block';
+            customDatesEnd.style.display = 'block';
+        } else {
+            customDates.style.display = 'none';
+            customDatesEnd.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}

@@ -3615,121 +3615,283 @@ def booking_report(request):
     return render(request, 'booking/reports/bookings.html', context)
 
 
+from django.shortcuts import render
+from django.db.models import Sum, Count, Avg, F, Q
+from django.db.models.functions import TruncDate, TruncHour, ExtractWeekDay, ExtractHour
+from django.utils import timezone
+from datetime import timedelta, datetime
+from decimal import Decimal
+import json
+
 def analytics_dashboard(request):
-    """Comprehensive analytics dashboard"""
+    """Comprehensive analytics dashboard with advanced filtering and charts"""
+    
+    # Get filter parameters
+    period = request.GET.get('period', 'month')
+    selected_operator = request.GET.get('operator', '')
+    selected_route = request.GET.get('route', '')
+    selected_payment_method = request.GET.get('payment_method', '')
+    selected_bus_type = request.GET.get('bus_type', '')
+    
+    # Calculate date range based on period
     today = timezone.now().date()
     
-    # Time period filters
-    last_30_days = today - timedelta(days=30)
-    last_7_days = today - timedelta(days=7)
-    
-    # Key Performance Indicators
-    total_revenue = Payment.objects.filter(
-        status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
-    
-    revenue_last_30 = Payment.objects.filter(
-        status='completed',
-        created_at__date__gte=last_30_days
-    ).aggregate(total=Sum('amount'))['total'] or 0
-    
-    total_bookings = Booking.objects.count()
-    bookings_last_30 = Booking.objects.filter(
-        created_at__date__gte=last_30_days
-    ).count()
-    
-    total_customers = Booking.objects.values('customer_email').distinct().count()
-    
-    # Occupancy rate
-    total_trips = Trip.objects.filter(
-        departure_date__gte=last_30_days,
-        status__in=['completed', 'departed']
-    ).count()
-    
-    if total_trips > 0:
-        trips_data = Trip.objects.filter(
-            departure_date__gte=last_30_days,
-            status__in=['completed', 'departed']
-        ).annotate(
-            total_seats=F('bus__seat_layout__total_seats'),
-            booked_seats=Count('bookings__seat_bookings')
-        )
-        
-        total_capacity = sum(t.total_seats for t in trips_data)
-        total_booked = sum(t.booked_seats for t in trips_data)
-        occupancy_rate = (total_booked / total_capacity * 100) if total_capacity > 0 else 0
+    if period == 'today':
+        date_from = today
+        date_to = today
+        prev_date_from = today - timedelta(days=1)
+        prev_date_to = today - timedelta(days=1)
+    elif period == 'yesterday':
+        date_from = today - timedelta(days=1)
+        date_to = today - timedelta(days=1)
+        prev_date_from = today - timedelta(days=2)
+        prev_date_to = today - timedelta(days=2)
+    elif period == 'week':
+        date_from = today - timedelta(days=7)
+        date_to = today
+        prev_date_from = today - timedelta(days=14)
+        prev_date_to = today - timedelta(days=7)
+    elif period == 'last_week':
+        date_from = today - timedelta(days=today.weekday() + 7)
+        date_to = date_from + timedelta(days=6)
+        prev_date_from = date_from - timedelta(days=7)
+        prev_date_to = date_to - timedelta(days=7)
+    elif period == 'month':
+        date_from = today.replace(day=1)
+        date_to = today
+        # Previous month
+        prev_date_to = date_from - timedelta(days=1)
+        prev_date_from = prev_date_to.replace(day=1)
+    elif period == 'last_month':
+        date_to = today.replace(day=1) - timedelta(days=1)
+        date_from = date_to.replace(day=1)
+        # Previous month
+        prev_date_to = date_from - timedelta(days=1)
+        prev_date_from = prev_date_to.replace(day=1)
+    elif period == 'quarter':
+        quarter = (today.month - 1) // 3
+        date_from = today.replace(month=quarter * 3 + 1, day=1)
+        date_to = today
+        # Previous quarter
+        prev_quarter_start = date_from - timedelta(days=90)
+        prev_date_from = prev_quarter_start.replace(day=1)
+        prev_date_to = date_from - timedelta(days=1)
+    elif period == 'year':
+        date_from = today.replace(month=1, day=1)
+        date_to = today
+        prev_date_from = date_from.replace(year=date_from.year - 1)
+        prev_date_to = date_to.replace(year=date_to.year - 1)
+    elif period == 'last_year':
+        date_from = today.replace(year=today.year - 1, month=1, day=1)
+        date_to = today.replace(year=today.year - 1, month=12, day=31)
+        prev_date_from = date_from.replace(year=date_from.year - 1)
+        prev_date_to = date_to.replace(year=date_to.year - 1)
+    elif period == 'custom':
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        if start_date and end_date:
+            date_from = datetime.strptime(start_date, '%Y-%m-%d').date()
+            date_to = datetime.strptime(end_date, '%Y-%m-%d').date()
+            date_diff = (date_to - date_from).days
+            prev_date_from = date_from - timedelta(days=date_diff + 1)
+            prev_date_to = date_from - timedelta(days=1)
+        else:
+            date_from = today - timedelta(days=30)
+            date_to = today
+            prev_date_from = today - timedelta(days=60)
+            prev_date_to = today - timedelta(days=30)
     else:
-        occupancy_rate = 0
+        date_from = today - timedelta(days=30)
+        date_to = today
+        prev_date_from = today - timedelta(days=60)
+        prev_date_to = today - timedelta(days=30)
     
-    # Top performing routes
-    top_routes = Route.objects.annotate(
-        booking_count=Count('trips__bookings', filter=Q(
-            trips__bookings__created_at__date__gte=last_30_days
-        )),
-        revenue=Sum('trips__bookings__total_amount', filter=Q(
-            trips__bookings__created_at__date__gte=last_30_days,
-            trips__bookings__status__in=['paid', 'confirmed', 'completed']
-        ))
-    ).order_by('-booking_count')[:5]
+    # Build base queryset with filters
+    bookings_qs = Booking.objects.filter(
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        status__in=['paid', 'confirmed', 'completed']
+    )
     
-    # Top performing buses
-    top_buses = Bus.objects.annotate(
-        trip_count=Count('trips', filter=Q(
-            trips__departure_date__gte=last_30_days
-        )),
-        revenue=Sum('trips__bookings__total_amount', filter=Q(
-            trips__bookings__created_at__date__gte=last_30_days,
-            trips__bookings__status__in=['paid', 'confirmed', 'completed']
-        ))
-    ).order_by('-revenue')[:5]
+    if selected_operator:
+        bookings_qs = bookings_qs.filter(trip__bus__operator_id=selected_operator)
     
-    # Customer satisfaction (average rating)
-    avg_rating = Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0
-    recent_reviews = Review.objects.select_related(
-        'bus', 'booking'
-    ).order_by('-created_at')[:5]
+    if selected_route:
+        bookings_qs = bookings_qs.filter(trip__route_id=selected_route)
     
-    # Revenue trend (last 7 days)
-    revenue_trend = Payment.objects.filter(
+    if selected_bus_type:
+        bookings_qs = bookings_qs.filter(trip__bus__bus_type=selected_bus_type)
+    
+    # Payment queryset
+    payments_qs = Payment.objects.filter(
+        booking__in=bookings_qs,
         status='completed',
-        created_at__date__gte=last_7_days
-    ).annotate(
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to
+    )
+    
+    if selected_payment_method:
+        payments_qs = payments_qs.filter(payment_method=selected_payment_method)
+    
+    # Previous period data for comparison
+    prev_bookings_qs = Booking.objects.filter(
+        created_at__date__gte=prev_date_from,
+        created_at__date__lte=prev_date_to,
+        status__in=['paid', 'confirmed', 'completed']
+    )
+    
+    # KPI Calculations
+    total_revenue = payments_qs.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    prev_revenue = Payment.objects.filter(
+        booking__in=prev_bookings_qs,
+        status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # Calculate revenue change percentage
+    if prev_revenue > 0:
+        revenue_change = float(((total_revenue - prev_revenue) / prev_revenue) * 100)
+    else:
+        revenue_change = 0
+    
+    total_transactions = payments_qs.count()
+    average_transaction = total_revenue / total_transactions if total_transactions > 0 else Decimal('0')
+    
+    # Daily Revenue Trend (Line Chart Data)
+    daily_revenue = payments_qs.annotate(
         date=TruncDate('created_at')
     ).values('date').annotate(
         total=Sum('amount')
     ).order_by('date')
     
-    # Booking trend (last 7 days)
-    booking_trend = Booking.objects.filter(
-        created_at__date__gte=last_7_days
-    ).annotate(
-        date=TruncDate('created_at')
-    ).values('date').annotate(
-        count=Count('id')
-    ).order_by('date')
+    daily_labels = [item['date'].strftime('%b %d') for item in daily_revenue]
+    daily_revenue_data = [float(item['total']) for item in daily_revenue]
     
-    # Most popular amenities
-    popular_amenities = Amenity.objects.annotate(
-        bus_count=Count('bus')
-    ).order_by('-bus_count')[:5]
+    # Hourly Distribution (Bar Chart)
+    hourly_data = payments_qs.annotate(
+        hour=ExtractHour('created_at')
+    ).values('hour').annotate(
+        total=Sum('amount')
+    ).order_by('hour')
+    
+    hourly_labels = [f"{item['hour']:02d}:00" for item in hourly_data]
+    hourly_revenue_data = [float(item['total']) for item in hourly_data]
+    
+    # Day of Week Analysis (Bar Chart)
+    day_of_week_data = payments_qs.annotate(
+        day=ExtractWeekDay('created_at')
+    ).values('day').annotate(
+        total=Sum('amount')
+    ).order_by('day')
+    
+    days_map = {1: 'Sunday', 2: 'Monday', 3: 'Tuesday', 4: 'Wednesday', 
+                5: 'Thursday', 6: 'Friday', 7: 'Saturday'}
+    day_labels = [days_map.get(item['day'], '') for item in day_of_week_data]
+    day_revenue_data = [float(item['total']) for item in day_of_week_data]
+    
+    # Payment Method Distribution (Donut Chart)
+    payment_method_data = payments_qs.values('payment_method').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    method_labels = [item['payment_method'].upper() for item in payment_method_data]
+    method_data = [float(item['total']) for item in payment_method_data]
+    
+    # Seat Class Distribution (Donut Chart)
+    seat_class_data = SeatBooking.objects.filter(
+        booking__in=bookings_qs
+    ).values('seat__seat_class').annotate(
+        total=Sum('fare'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    seat_class_labels = [item['seat__seat_class'].upper() for item in seat_class_data]
+    seat_class_revenue_data = [float(item['total']) for item in seat_class_data]
+    
+    # Revenue by Operator
+    revenue_by_operator = bookings_qs.values(
+        operator_name=F('trip__bus__operator__name')
+    ).annotate(
+        total=Sum('total_amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    # Add percentage
+    for item in revenue_by_operator:
+        item['percentage'] = float((item['total'] / total_revenue * 100) if total_revenue > 0 else 0)
+    
+    # Revenue by Route
+    revenue_by_route = bookings_qs.values(
+        origin=F('trip__route__origin__name'),
+        destination=F('trip__route__destination__name'),
+        distance=F('trip__route__distance_km')
+    ).annotate(
+        total=Sum('total_amount'),
+        count=Count('id'),
+        avg=Avg('total_amount')
+    ).order_by('-total')
+    
+    # Add percentage and revenue per km
+    for item in revenue_by_route:
+        item['percentage'] = float((item['total'] / total_revenue * 100) if total_revenue > 0 else 0)
+        item['revenue_per_km'] = float(item['total'] / item['distance']) if item['distance'] > 0 else 0
+    
+    # Revenue by Payment Method
+    revenue_by_method = payment_method_data
+    for item in revenue_by_method:
+        item['percentage'] = float((item['total'] / total_revenue * 100) if total_revenue > 0 else 0)
+    
+    # Prepare chart data as JSON
+    chart_data = {
+        'daily_labels': daily_labels,
+        'daily_revenue': daily_revenue_data,
+        'hourly_labels': hourly_labels,
+        'hourly_data': hourly_revenue_data,
+        'day_labels': day_labels,
+        'day_data': day_revenue_data,
+        'method_labels': method_labels,
+        'method_data': method_data,
+        'seat_class_labels': seat_class_labels,
+        'seat_class_data': seat_class_revenue_data,
+    }
+    
+    # Get filter options
+    operators = BusOperator.objects.filter(is_active=True)
+    routes = Route.objects.filter(is_active=True)
+    payment_methods = Payment.objects.values_list('payment_method', flat=True).distinct()
+    bus_types = Bus.objects.values_list('bus_type', flat=True).distinct()
     
     context = {
+        # Filters
+        'period': period,
+        'date_from': date_from,
+        'date_to': date_to,
+        'operators': operators,
+        'routes': routes,
+        'payment_methods': payment_methods,
+        'bus_types': bus_types,
+        'selected_operator': selected_operator,
+        'selected_route': selected_route,
+        'selected_payment_method': selected_payment_method,
+        'selected_bus_type': selected_bus_type,
+        
+        # KPIs
         'total_revenue': total_revenue,
-        'revenue_last_30': revenue_last_30,
-        'total_bookings': total_bookings,
-        'bookings_last_30': bookings_last_30,
-        'total_customers': total_customers,
-        'occupancy_rate': round(occupancy_rate, 2),
-        'avg_rating': round(avg_rating, 2),
-        'top_routes': top_routes,
-        'top_buses': top_buses,
-        'recent_reviews': recent_reviews,
-        'revenue_trend': list(revenue_trend),
-        'booking_trend': list(booking_trend),
-        'popular_amenities': popular_amenities,
+        'prev_revenue': prev_revenue,
+        'revenue_change': revenue_change,
+        'total_transactions': total_transactions,
+        'average_transaction': average_transaction,
+        
+        # Charts data
+        'chart_data': json.dumps(chart_data),
+        
+        # Tables data
+        'revenue_by_operator': revenue_by_operator,
+        'revenue_by_route': revenue_by_route,
+        'revenue_by_method': revenue_by_method,
     }
+    
     return render(request, 'booking/reports/analytics.html', context)
-
 
 # ==================== AMENITIES ====================
 def amenity_list(request):
