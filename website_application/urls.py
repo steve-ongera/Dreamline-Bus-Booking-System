@@ -72,5 +72,5 @@ urlpatterns = [
     path('amenities/<int:pk>/delete/', views.amenity_delete, name='amenity_delete'),
     path('admin-security/', views.security_dashboard, name='security_dashboard'),
     path('api/security/', views.security_api, name='security_api'),
-    
+ 
 ]

@@ -511,25 +511,30 @@ def api_create_booking(request):
 
 
 
+
 from django.shortcuts import render
-from django.db.models import Sum, Count, Q, Avg
+from django.db.models import Sum, Count, Q, Avg, F
 from django.utils import timezone
 from datetime import timedelta, datetime
 from decimal import Decimal
+from collections import defaultdict
+import json
 from .models import (
     Booking, Trip, Bus, Payment, Route, 
-    SeatBooking, BusOperator, Review
+    SeatBooking, BusOperator, Review, Location,
+    BoardingPoint, Amenity
 )
 
 
 def admin_dashboard(request):
     """
-    Admin dashboard view with statistics, charts data, and recent activity
+    Enhanced admin dashboard with comprehensive analytics
     """
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
     last_30_days = today - timedelta(days=30)
     last_7_days = today - timedelta(days=7)
+    last_90_days = today - timedelta(days=90)
     
     # ============== TODAY'S STATS ==============
     
@@ -593,6 +598,7 @@ def admin_dashboard(request):
     # ============== REVENUE CHART DATA (Last 30 Days) ==============
     revenue_data = []
     revenue_labels = []
+    booking_counts = []
     
     for i in range(29, -1, -1):
         date = today - timedelta(days=i)
@@ -601,7 +607,12 @@ def admin_dashboard(request):
             status='completed'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
         
+        daily_bookings = Booking.objects.filter(
+            created_at__date=date
+        ).count()
+        
         revenue_data.append(float(daily_revenue))
+        booking_counts.append(daily_bookings)
         revenue_labels.append(date.strftime('%b %d'))
     
     # ============== BOOKING STATUS PIE CHART ==============
@@ -611,13 +622,6 @@ def admin_dashboard(request):
     
     status_labels = []
     status_data = []
-    status_colors = {
-        'confirmed': '#3498db',
-        'pending': '#f39c12',
-        'cancelled': '#e74c3c',
-        'completed': '#27ae60',
-        'paid': '#9b59b6'
-    }
     
     for status in booking_statuses:
         status_labels.append(status['status'].title())
@@ -630,35 +634,38 @@ def admin_dashboard(request):
         'trip__route__origin__name',
         'trip__route__destination__name'
     ).annotate(
-        count=Count('id')
-    ).order_by('-count')[:5]
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('-count')[:10]
     
     route_labels = []
     route_data = []
+    route_revenue = []
     
     for route in top_routes:
         origin = route['trip__route__origin__name']
         destination = route['trip__route__destination__name']
-        route_labels.append(f"{origin} - {destination}")
+        route_labels.append(f"{origin} → {destination}")
         route_data.append(route['count'])
+        route_revenue.append(float(route['revenue'] or 0))
     
     # ============== PAYMENT METHODS DOUGHNUT CHART ==============
     payment_methods = Payment.objects.filter(
         created_at__gte=last_30_days,
         status='completed'
-    ).values('payment_method').annotate(count=Count('id'))
+    ).values('payment_method').annotate(
+        count=Count('id'),
+        total=Sum('amount')
+    )
     
     payment_labels = []
     payment_data = []
-    payment_colors = {
-        'mpesa': '#27ae60',
-        'card': '#3498db',
-        'cash': '#95a5a6'
-    }
+    payment_revenue = []
     
     for method in payment_methods:
         payment_labels.append(method['payment_method'].upper())
         payment_data.append(method['count'])
+        payment_revenue.append(float(method['total'] or 0))
     
     # ============== OCCUPANCY RATE LINE CHART (Last 7 Days) ==============
     occupancy_data = []
@@ -667,10 +674,9 @@ def admin_dashboard(request):
     for i in range(6, -1, -1):
         date = today - timedelta(days=i)
         
-        # Get all trips for this date
         trips_on_date = Trip.objects.filter(
             departure_date=date,
-            status__in=['departed', 'completed']
+            status__in=['departed', 'completed', 'scheduled']
         )
         
         total_seats = 0
@@ -684,7 +690,6 @@ def admin_dashboard(request):
             ).count()
             booked_seats += booked
         
-        # Calculate occupancy percentage
         if total_seats > 0:
             occupancy_rate = (booked_seats / total_seats) * 100
         else:
@@ -692,6 +697,150 @@ def admin_dashboard(request):
         
         occupancy_data.append(round(occupancy_rate, 1))
         occupancy_labels.append(date.strftime('%a'))
+    
+    # ============== HOURLY BOOKING PATTERN ==============
+    from django.db.models.functions import ExtractHour
+    
+    hourly_bookings = Booking.objects.filter(
+        created_at__gte=last_7_days
+    ).annotate(
+        hour=ExtractHour('created_at')
+    ).values('hour').annotate(
+        count=Count('id')
+    ).order_by('hour')
+    
+    hourly_labels = [f"{i:02d}:00" for i in range(24)]
+    hourly_data = [0] * 24
+    
+    for item in hourly_bookings:
+        hour = int(item['hour'])
+        hourly_data[hour] = item['count']
+    
+    # ============== DAY OF WEEK ANALYSIS ==============
+    from django.db.models.functions import ExtractWeekDay
+    
+    dow_bookings = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).annotate(
+        dow=ExtractWeekDay('created_at')
+    ).values('dow').annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('dow')
+    
+    # ExtractWeekDay returns 1=Sunday, 2=Monday, etc.
+    days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    dow_labels = days
+    dow_data = [0] * 7
+    dow_revenue = [0] * 7
+    
+    for item in dow_bookings:
+        dow = int(item['dow']) - 1  # Convert to 0-indexed
+        if 0 <= dow < 7:
+            dow_data[dow] = item['count']
+            dow_revenue[dow] = float(item['revenue'] or 0)
+    
+    # ============== BUS TYPE PERFORMANCE ==============
+    bus_type_performance = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).values('trip__bus__bus_type').annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('-count')
+    
+    bus_type_labels = []
+    bus_type_data = []
+    bus_type_revenue = []
+    
+    for item in bus_type_performance:
+        if item['trip__bus__bus_type']:
+            bus_type_labels.append(item['trip__bus__bus_type'].title())
+            bus_type_data.append(item['count'])
+            bus_type_revenue.append(float(item['revenue'] or 0))
+    
+    # ============== SEAT CLASS DISTRIBUTION ==============
+    seat_class_data = SeatBooking.objects.filter(
+        booking__created_at__gte=last_30_days,
+        booking__status__in=['confirmed', 'paid', 'completed']
+    ).values('seat__seat_class').annotate(
+        count=Count('id'),
+        revenue=Sum('fare')
+    )
+    
+    seat_class_labels = []
+    seat_class_counts = []
+    seat_class_revenue = []
+    
+    for item in seat_class_data:
+        if item['seat__seat_class']:
+            seat_class_labels.append(item['seat__seat_class'].upper())
+            seat_class_counts.append(item['count'])
+            seat_class_revenue.append(float(item['revenue'] or 0))
+    
+    # ============== TOP OPERATORS BY BOOKINGS ==============
+    operator_performance = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).values('trip__bus__operator__name').annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('-count')[:5]
+    
+    operator_labels = []
+    operator_data = []
+    operator_revenue = []
+    
+    for item in operator_performance:
+        if item['trip__bus__operator__name']:
+            operator_labels.append(item['trip__bus__operator__name'])
+            operator_data.append(item['count'])
+            operator_revenue.append(float(item['revenue'] or 0))
+    
+    # ============== TOP BOARDING POINTS ==============
+    boarding_points = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).values('boarding_point__name').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    boarding_labels = [bp['boarding_point__name'] for bp in boarding_points if bp['boarding_point__name']]
+    boarding_data = [bp['count'] for bp in boarding_points if bp['boarding_point__name']]
+    
+    # ============== TOP DROPPING POINTS ==============
+    dropping_points = Booking.objects.filter(
+        created_at__gte=last_30_days
+    ).values('dropping_point__name').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    dropping_labels = [dp['dropping_point__name'] for dp in dropping_points if dp['dropping_point__name']]
+    dropping_data = [dp['count'] for dp in dropping_points if dp['dropping_point__name']]
+    
+    # ============== MONTHLY COMPARISON (Last 3 Months) ==============
+    monthly_labels = []
+    monthly_revenue = []
+    monthly_bookings = []
+    
+    for i in range(2, -1, -1):
+        month_start = (today.replace(day=1) - timedelta(days=i*30)).replace(day=1)
+        if i == 0:
+            month_end = today
+        else:
+            month_end = (today.replace(day=1) - timedelta(days=(i-1)*30)).replace(day=1) - timedelta(days=1)
+        
+        month_revenue = Payment.objects.filter(
+            created_at__date__gte=month_start,
+            created_at__date__lte=month_end,
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        month_bookings = Booking.objects.filter(
+            created_at__date__gte=month_start,
+            created_at__date__lte=month_end
+        ).count()
+        
+        monthly_labels.append(month_start.strftime('%B'))
+        monthly_revenue.append(float(month_revenue))
+        monthly_bookings.append(month_bookings)
     
     # ============== RECENT BOOKINGS ==============
     recent_bookings = Booking.objects.select_related(
@@ -729,7 +878,6 @@ def admin_dashboard(request):
         
         occupancy_percentage = (booked_seats / total_seats * 100) if total_seats > 0 else 0
         
-        # Determine occupancy level
         if occupancy_percentage >= 80:
             occupancy_level = 'high'
         elif occupancy_percentage >= 50:
@@ -751,18 +899,58 @@ def admin_dashboard(request):
         })
     
     # ============== ADDITIONAL STATS ==============
-    
-    # Total buses
     total_buses = Bus.objects.filter(is_active=True).count()
-    
-    # Total operators
     total_operators = BusOperator.objects.filter(is_active=True).count()
-    
-    # Average rating
     avg_rating = Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0
-    
-    # Total routes
     total_routes = Route.objects.filter(is_active=True).count()
+    total_customers = Booking.objects.values('customer_email').distinct().count()
+    
+    # ============== CONVERSION RATE ==============
+    total_bookings_30d = Booking.objects.filter(created_at__gte=last_30_days).count()
+    confirmed_bookings_30d = Booking.objects.filter(
+        created_at__gte=last_30_days,
+        status__in=['confirmed', 'paid', 'completed']
+    ).count()
+    
+    conversion_rate = (confirmed_bookings_30d / total_bookings_30d * 100) if total_bookings_30d > 0 else 0
+    
+    # Prepare chart data as JSON
+    chart_data = {
+        'revenue_labels': revenue_labels,
+        'revenue_data': revenue_data,
+        'booking_counts': booking_counts,
+        'status_labels': status_labels,
+        'status_data': status_data,
+        'route_labels': route_labels,
+        'route_data': route_data,
+        'route_revenue': route_revenue,
+        'payment_labels': payment_labels,
+        'payment_data': payment_data,
+        'payment_revenue': payment_revenue,
+        'occupancy_labels': occupancy_labels,
+        'occupancy_data': occupancy_data,
+        'hourly_labels': hourly_labels,
+        'hourly_data': hourly_data,
+        'dow_labels': dow_labels,
+        'dow_data': dow_data,
+        'dow_revenue': dow_revenue,
+        'bus_type_labels': bus_type_labels,
+        'bus_type_data': bus_type_data,
+        'bus_type_revenue': bus_type_revenue,
+        'seat_class_labels': seat_class_labels,
+        'seat_class_counts': seat_class_counts,
+        'seat_class_revenue': seat_class_revenue,
+        'operator_labels': operator_labels,
+        'operator_data': operator_data,
+        'operator_revenue': operator_revenue,
+        'boarding_labels': boarding_labels,
+        'boarding_data': boarding_data,
+        'dropping_labels': dropping_labels,
+        'dropping_data': dropping_data,
+        'monthly_labels': monthly_labels,
+        'monthly_revenue': monthly_revenue,
+        'monthly_bookings': monthly_bookings,
+    }
     
     context = {
         # Stats
@@ -781,25 +969,8 @@ def admin_dashboard(request):
         'pending_change': pending_yesterday - pending_payments,
         'pending_change_positive': (pending_yesterday - pending_payments) > 0,
         
-        # Chart data - Revenue
-        'revenue_labels': revenue_labels,
-        'revenue_data': revenue_data,
-        
-        # Chart data - Booking Status
-        'status_labels': status_labels,
-        'status_data': status_data,
-        
-        # Chart data - Top Routes
-        'route_labels': route_labels,
-        'route_data': route_data,
-        
-        # Chart data - Payment Methods
-        'payment_labels': payment_labels,
-        'payment_data': payment_data,
-        
-        # Chart data - Occupancy
-        'occupancy_labels': occupancy_labels,
-        'occupancy_data': occupancy_data,
+        # Chart data as JSON
+        'chart_data': json.dumps(chart_data),
         
         # Recent data
         'recent_bookings': bookings_list,
@@ -810,11 +981,11 @@ def admin_dashboard(request):
         'total_operators': total_operators,
         'avg_rating': round(avg_rating, 2),
         'total_routes': total_routes,
+        'total_customers': total_customers,
+        'conversion_rate': round(conversion_rate, 1),
     }
     
     return render(request, 'admin/dashboard.html', context)
-
-
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
