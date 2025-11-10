@@ -1,0 +1,196 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Amenities - Bus Booking Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .amenities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .amenity-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+    
+    .amenity-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    
+    .amenity-icon-large {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-bottom: 1rem;
+        color: white;
+    }
+    
+    .amenity-name {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+    
+    .amenity-description {
+        color: #666;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+    
+    .amenity-stats {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+    
+    .amenity-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-edit, .btn-delete {
+        flex: 1;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid #e0e0e0;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+    
+    .btn-edit {
+        background: white;
+        color: #667eea;
+    }
+    
+    .btn-edit:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .btn-delete {
+        background: white;
+        color: #f44336;
+    }
+    
+    .btn-delete:hover {
+        background: #f44336;
+        color: white;
+        border-color: #f44336;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="page-header">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Amenities</h1>
+            <p class="text-muted mb-0">Manage bus amenities and features</p>
+        </div>
+        <a href="{% url 'amenity_create' %}" class="btn-primary-custom">
+            <i class="bi bi-plus-lg"></i>
+            Add New Amenity
+        </a>
+    </div>
+    
+    {% if amenities %}
+    <div class="amenities-grid">
+        {% for amenity in amenities %}
+        <div class="amenity-card">
+            <div class="amenity-icon-large">
+                {{ amenity.icon|safe }}
+            </div>
+            <h3 class="amenity-name">{{ amenity.name }}</h3>
+            <p class="amenity-description">
+                {% if amenity.description %}
+                    {{ amenity.description }}
+                {% else %}
+                    No description provided
+                {% endif %}
+            </p>
+            <div class="amenity-stats">
+                <i class="bi bi-bus-front"></i>
+                <span>Used by {{ amenity.bus_count }} buses</span>
+            </div>
+            <div class="amenity-actions">
+                <a href="{% url 'amenity_edit' amenity.pk %}" class="btn-edit">
+                    <i class="bi bi-pencil"></i>
+                    Edit
+                </a>
+                <a href="{% url 'amenity_delete' amenity.pk %}" class="btn-delete">
+                    <i class="bi bi-trash"></i>
+                    Delete
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-puzzle" style="font-size: 4rem; color: #e0e0e0;"></i>
+        <h3 class="mt-3">No Amenities Yet</h3>
+        <p class="text-muted">Start by adding your first amenity</p>
+        <a href="{% url 'amenity_create' %}" class="btn-primary-custom mt-3">
+            <i class="bi bi-plus-lg"></i>
+            Add Amenity
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

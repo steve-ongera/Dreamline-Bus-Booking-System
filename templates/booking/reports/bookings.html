@@ -1,0 +1,548 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Booking Reports - Bus Booking Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .period-selector {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .period-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .period-btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: white;
+        color: #666;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    
+    .period-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    .period-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .booking-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+    }
+    
+    .stat-card.purple::before {
+        background: #667eea;
+    }
+    
+    .stat-card.green::before {
+        background: #4caf50;
+    }
+    
+    .stat-card.orange::before {
+        background: #ff9800;
+    }
+    
+    .stat-card.red::before {
+        background: #f44336;
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card.purple .stat-icon {
+        background: #eef2ff;
+        color: #667eea;
+    }
+    
+    .stat-card.green .stat-icon {
+        background: #e8f5e9;
+        color: #4caf50;
+    }
+    
+    .stat-card.orange .stat-icon {
+        background: #fff3e0;
+        color: #ff9800;
+    }
+    
+    .stat-card.red .stat-icon {
+        background: #ffebee;
+        color: #f44336;
+    }
+    
+    .stat-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.25rem;
+        color: #1a1a1a;
+    }
+    
+    .stat-card p {
+        color: #666;
+        margin: 0;
+        font-size: 0.875rem;
+    }
+    
+    .status-chart {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .status-chart h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .status-chart h3 i {
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .status-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    
+    .status-color.confirmed {
+        background: #4caf50;
+    }
+    
+    .status-color.pending {
+        background: #ff9800;
+    }
+    
+    .status-color.cancelled {
+        background: #f44336;
+    }
+    
+    .status-color.completed {
+        background: #2196f3;
+    }
+    
+    .status-info {
+        flex: 1;
+    }
+    
+    .status-name {
+        font-weight: 600;
+        color: #1a1a1a;
+        text-transform: capitalize;
+    }
+    
+    .status-progress {
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .status-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+    
+    .status-count {
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: #1a1a1a;
+    }
+    
+    .report-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .report-section h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .report-section h3 i {
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+    
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .report-table th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .report-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .report-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .progress-bar-container {
+        background: #f5f5f5;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .seat-class-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .seat-class-badge.vip {
+        background: #fce4ec;
+        color: #c2185b;
+    }
+    
+    .seat-class-badge.business {
+        background: #e1f5fe;
+        color: #0277bd;
+    }
+    
+    .seat-class-badge.normal {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Booking Reports</h1>
+            <p class="text-muted mb-0">Analyze booking patterns and trends</p>
+        </div>
+    </div>
+    
+    <!-- Period Selector -->
+    <div class="period-selector">
+        <div class="period-buttons">
+            <a href="?period=day" class="period-btn {% if period == 'day' %}active{% endif %}">
+                Today
+            </a>
+            <a href="?period=week" class="period-btn {% if period == 'week' %}active{% endif %}">
+                Last 7 Days
+            </a>
+            <a href="?period=month" class="period-btn {% if period == 'month' or not period %}active{% endif %}">
+                Last 30 Days
+            </a>
+            <a href="?period=quarter" class="period-btn {% if period == 'quarter' %}active{% endif %}">
+                Last 90 Days
+            </a>
+        </div>
+    </div>
+    
+    <!-- Booking Statistics -->
+    <div class="booking-stats">
+        <div class="stat-card purple">
+            <div class="stat-icon">
+                <i class="bi bi-ticket-detailed"></i>
+            </div>
+            <h3>{{ total_bookings }}</h3>
+            <p>Total Bookings</p>
+        </div>
+        
+        <div class="stat-card green">
+            <div class="stat-icon">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <h3>{{ confirmed_bookings }}</h3>
+            <p>Confirmed</p>
+        </div>
+        
+        <div class="stat-card orange">
+            <div class="stat-icon">
+                <i class="bi bi-clock"></i>
+            </div>
+            <h3>{{ pending_bookings }}</h3>
+            <p>Pending</p>
+        </div>
+        
+        <div class="stat-card red">
+            <div class="stat-icon">
+                <i class="bi bi-x-circle"></i>
+            </div>
+            <h3>{{ cancelled_bookings }}</h3>
+            <p>Cancelled</p>
+        </div>
+    </div>
+    
+    <!-- Booking Status Distribution -->
+    <div class="status-chart">
+        <h3>
+            <i class="bi bi-pie-chart"></i>
+            Booking Status Distribution
+        </h3>
+        
+        {% for status in status_distribution %}
+        <div class="status-item">
+            <div class="status-color {{ status.status }}"></div>
+            <div class="status-info">
+                <div class="status-name">{{ status.status }}</div>
+                <div class="status-progress">
+                    <div class="status-progress-fill {{ status.status }}" 
+                         style="width: {% widthratio status.count total_bookings 100 %}%; 
+                                background: {% if status.status == 'confirmed' or status.status == 'paid' or status.status == 'completed' %}#4caf50{% elif status.status == 'pending' %}#ff9800{% else %}#f44336{% endif %}">
+                    </div>
+                </div>
+            </div>
+            <div class="status-count">{{ status.count }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Bookings by Route -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-signpost-2"></i>
+            Top Routes by Bookings
+        </h3>
+        
+        {% if bookings_by_route %}
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Route</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                    <th>Performance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for route in bookings_by_route %}
+                <tr>
+                    <td>
+                        <strong>{{ route.trip__route__origin__name }}</strong>
+                        <i class="bi bi-arrow-right mx-2 text-muted"></i>
+                        <strong>{{ route.trip__route__destination__name }}</strong>
+                    </td>
+                    <td><strong>{{ route.count }}</strong></td>
+                    <td class="text-success fw-bold">KES {{ route.revenue|floatformat:2 }}</td>
+                    <td>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {% widthratio route.count total_bookings 100 %}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No booking data available.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Bookings by Operator -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-building"></i>
+            Bookings by Operator
+        </h3>
+        
+        {% if bookings_by_operator %}
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Operator</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                    <th>Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for operator in bookings_by_operator %}
+                <tr>
+                    <td><strong>{{ operator.trip__bus__operator__name }}</strong></td>
+                    <td><strong>{{ operator.count }}</strong></td>
+                    <td class="text-success fw-bold">KES {{ operator.revenue|floatformat:2 }}</td>
+                    <td>
+                        {% widthratio operator.count total_bookings 100 %}%
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {% widthratio operator.count total_bookings 100 %}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No operator data available.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Seat Class Preferences -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-chair"></i>
+            Seat Class Preferences
+        </h3>
+        
+        {% if seat_class_stats %}
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Seat Class</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                    <th>Popularity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for class_stat in seat_class_stats %}
+                <tr>
+                    <td>
+                        <span class="seat-class-badge {{ class_stat.seat__seat_class }}">
+                            {% if class_stat.seat__seat_class == 'vip' %}
+                                VIP
+                            {% elif class_stat.seat__seat_class == 'business' %}
+                                Business
+                            {% else %}
+                                Economy
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td><strong>{{ class_stat.count }}</strong></td>
+                    <td class="text-success fw-bold">KES {{ class_stat.revenue|floatformat:2 }}</td>
+                    <td>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {% widthratio class_stat.count total_bookings 100 %}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No seat class data available.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Key Metrics -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-graph-up"></i>
+            Key Metrics
+        </h3>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 bg-light rounded">
+                    <h4 class="h6 text-muted mb-2">Average Booking Value</h4>
+                    <p class="h4 mb-0 text-success fw-bold">KES {{ avg_booking_value|floatformat:2 }}</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 bg-light rounded">
+                    <h4 class="h6 text-muted mb-2">Confirmation Rate</h4>
+                    <p class="h4 mb-0 text-primary fw-bold">
+                        {% if total_bookings > 0 %}
+                            {% widthratio confirmed_bookings total_bookings 100 %}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

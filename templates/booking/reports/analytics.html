@@ -1,0 +1,537 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Analytics Dashboard - Bus Booking Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .kpi-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        opacity: 0.05;
+        font-size: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+    
+    .kpi-card.revenue .kpi-icon {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+    }
+    
+    .kpi-card.bookings .kpi-icon {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .kpi-card.customers .kpi-icon {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+    }
+    
+    .kpi-card.occupancy .kpi-icon {
+        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        color: white;
+    }
+    
+    .kpi-card.rating .kpi-icon {
+        background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+        color: white;
+    }
+    
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0.5rem 0;
+    }
+    
+    .kpi-label {
+        color: #666;
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .kpi-change {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .kpi-change.positive {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .kpi-change.negative {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .chart-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .chart-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .chart-header h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .chart-header h3 i {
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+    
+    .top-items {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .top-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    
+    .top-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+    
+    .item-rank {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    
+    .item-rank.gold {
+        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+    }
+    
+    .item-rank.silver {
+        background: linear-gradient(135deg, #c0c0c0 0%, #808080 100%);
+    }
+    
+    .item-rank.bronze {
+        background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
+    }
+    
+    .item-info {
+        flex: 1;
+    }
+    
+    .item-name {
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.25rem;
+    }
+    
+    .item-details {
+        font-size: 0.8125rem;
+        color: #666;
+    }
+    
+    .item-metric {
+        text-align: right;
+    }
+    
+    .item-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+    
+    .item-subvalue {
+        font-size: 0.8125rem;
+        color: #666;
+    }
+    
+    .review-card {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .review-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1.125rem;
+        flex-shrink: 0;
+    }
+    
+    .review-content {
+        flex: 1;
+    }
+    
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .review-author {
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+    
+    .review-stars {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .review-stars i {
+        color: #ffd700;
+        font-size: 1rem;
+    }
+    
+    .review-text {
+        font-size: 0.875rem;
+        color: #666;
+        line-height: 1.5;
+    }
+    
+    .amenity-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .amenity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .amenity-info {
+        flex: 1;
+    }
+    
+    .amenity-name {
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+    
+    .amenity-count {
+        font-size: 0.8125rem;
+        color: #666;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Analytics Dashboard</h1>
+            <p class="text-muted mb-0">Comprehensive business insights and performance metrics</p>
+        </div>
+    </div>
+    
+    <!-- Key Performance Indicators -->
+    <div class="kpi-grid">
+        <div class="kpi-card revenue">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-icon">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="kpi-value">KES {{ total_revenue|floatformat:0 }}</div>
+            <p class="kpi-label">Total Revenue</p>
+            <span class="kpi-change positive">
+                <i class="bi bi-arrow-up"></i>
+                Last 30 days: KES {{ revenue_last_30|floatformat:0 }}
+            </span>
+        </div>
+        
+        <div class="kpi-card bookings">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-icon">
+                        <i class="bi bi-ticket-detailed"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="kpi-value">{{ total_bookings }}</div>
+            <p class="kpi-label">Total Bookings</p>
+            <span class="kpi-change positive">
+                <i class="bi bi-arrow-up"></i>
+                Last 30 days: {{ bookings_last_30 }}
+            </span>
+        </div>
+        
+        <div class="kpi-card customers">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="kpi-value">{{ total_customers }}</div>
+            <p class="kpi-label">Total Customers</p>
+        </div>
+        
+        <div class="kpi-card occupancy">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-icon">
+                        <i class="bi bi-clipboard-data"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="kpi-value">{{ occupancy_rate }}%</div>
+            <p class="kpi-label">Occupancy Rate</p>
+        </div>
+        
+        <div class="kpi-card rating">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-icon">
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="kpi-value">{{ avg_rating }}</div>
+            <p class="kpi-label">Average Rating</p>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="stats-row">
+        <!-- Top Performing Routes -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3>
+                    <i class="bi bi-signpost-2"></i>
+                    Top Routes
+                </h3>
+            </div>
+            
+            <div class="top-items">
+                {% for route in top_routes %}
+                <div class="top-item">
+                    <div class="item-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                        {{ forloop.counter }}
+                    </div>
+                    <div class="item-info">
+                        <div class="item-name">
+                            {{ route.origin.name }} → {{ route.destination.name }}
+                        </div>
+                        <div class="item-details">
+                            {{ route.booking_count }} bookings
+                        </div>
+                    </div>
+                    <div class="item-metric">
+                        <div class="item-value">KES {{ route.revenue|floatformat:0 }}</div>
+                        <div class="item-subvalue">Revenue</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3">No route data available</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Top Performing Buses -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3>
+                    <i class="bi bi-bus-front"></i>
+                    Top Buses
+                </h3>
+            </div>
+            
+            <div class="top-items">
+                {% for bus in top_buses %}
+                <div class="top-item">
+                    <div class="item-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                        {{ forloop.counter }}
+                    </div>
+                    <div class="item-info">
+                        <div class="item-name">{{ bus.bus_name }}</div>
+                        <div class="item-details">
+                            {{ bus.operator.name }} • {{ bus.trip_count }} trips
+                        </div>
+                    </div>
+                    <div class="item-metric">
+                        <div class="item-value">KES {{ bus.revenue|floatformat:0 }}</div>
+                        <div class="item-subvalue">Revenue</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3">No bus data available</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Reviews and Amenities -->
+    <div class="stats-row">
+        <!-- Recent Reviews -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3>
+                    <i class="bi bi-star"></i>
+                    Recent Reviews
+                </h3>
+            </div>
+            
+            {% for review in recent_reviews %}
+            <div class="review-card">
+                <div class="review-avatar">
+                    {{ review.booking.customer_full_name|slice:":1"|upper }}
+                </div>
+                <div class="review-content">
+                    <div class="review-header">
+                        <span class="review-author">{{ review.booking.customer_full_name }}</span>
+                        <div class="review-stars">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="review-text">
+                        {% if review.comment %}
+                            {{ review.comment|truncatewords:20 }}
+                        {% else %}
+                            No comment provided.
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ review.bus.bus_name }} • {{ review.created_at|timesince }} ago</small>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center py-3">No reviews yet</p>
+            {% endfor %}
+        </div>
+        
+        <!-- Popular Amenities -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3>
+                    <i class="bi bi-puzzle"></i>
+                    Popular Amenities
+                </h3>
+            </div>
+            
+            {% for amenity in popular_amenities %}
+            <div class="amenity-item">
+                <div class="amenity-icon">
+                    {{ amenity.icon|safe }}
+                </div>
+                <div class="amenity-info">
+                    <div class="amenity-name">{{ amenity.name }}</div>
+                    <div class="amenity-count">Available on {{ amenity.bus_count }} buses</div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center py-3">No amenities configured</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

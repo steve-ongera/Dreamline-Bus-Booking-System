@@ -1,0 +1,410 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Revenue Reports - Bus Booking Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .period-selector {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .period-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .period-btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: white;
+        color: #666;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    
+    .period-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    .period-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .revenue-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .revenue-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .revenue-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+    }
+    
+    .revenue-card.green::before {
+        background: #4caf50;
+    }
+    
+    .revenue-card.blue::before {
+        background: #2196f3;
+    }
+    
+    .revenue-card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin-bottom: 1rem;
+    }
+    
+    .revenue-card.green .revenue-card-icon {
+        background: #e8f5e9;
+        color: #4caf50;
+    }
+    
+    .revenue-card.blue .revenue-card-icon {
+        background: #e3f2fd;
+        color: #2196f3;
+    }
+    
+    .revenue-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem;
+        color: #1a1a1a;
+    }
+    
+    .revenue-card p {
+        color: #666;
+        margin: 0;
+        font-size: 0.875rem;
+    }
+    
+    .report-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .report-section h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .report-section h3 i {
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 1rem;
+    }
+    
+    .revenue-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .revenue-table th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .revenue-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .revenue-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .revenue-amount {
+        font-weight: 600;
+        color: #4caf50;
+        font-size: 1.125rem;
+    }
+    
+    .method-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .method-badge.mpesa {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .method-badge.card {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .method-badge.cash {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .progress-bar-container {
+        background: #f5f5f5;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .date-range-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .date-range-info i {
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Revenue Reports</h1>
+            <p class="text-muted mb-0">Track and analyze revenue performance</p>
+        </div>
+    </div>
+    
+    <!-- Period Selector -->
+    <div class="period-selector">
+        <div class="period-buttons">
+            <a href="?period=day" class="period-btn {% if period == 'day' %}active{% endif %}">
+                Today
+            </a>
+            <a href="?period=week" class="period-btn {% if period == 'week' %}active{% endif %}">
+                Last 7 Days
+            </a>
+            <a href="?period=month" class="period-btn {% if period == 'month' or not period %}active{% endif %}">
+                This Month
+            </a>
+            <a href="?period=year" class="period-btn {% if period == 'year' %}active{% endif %}">
+                This Year
+            </a>
+        </div>
+        
+        <div class="date-range-info mt-3">
+            <i class="bi bi-calendar-range"></i>
+            <span><strong>Showing:</strong> {{ date_from|date:"M d, Y" }} - {{ date_to|date:"M d, Y" }}</span>
+        </div>
+    </div>
+    
+    <!-- Revenue Statistics -->
+    <div class="revenue-stats">
+        <div class="revenue-card green">
+            <div class="revenue-card-icon">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <h3>KES {{ total_revenue|floatformat:2 }}</h3>
+            <p>Total Revenue</p>
+        </div>
+        
+        <div class="revenue-card blue">
+            <div class="revenue-card-icon">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <h3>{{ total_transactions }}</h3>
+            <p>Total Transactions</p>
+        </div>
+    </div>
+    
+    <!-- Revenue by Payment Method -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-credit-card"></i>
+            Revenue by Payment Method
+        </h3>
+        
+        {% if revenue_by_method %}
+        <table class="revenue-table">
+            <thead>
+                <tr>
+                    <th>Payment Method</th>
+                    <th>Transactions</th>
+                    <th>Total Revenue</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for method in revenue_by_method %}
+                <tr>
+                    <td>
+                        <span class="method-badge {{ method.payment_method }}">
+                            {% if method.payment_method == 'mpesa' %}
+                                M-Pesa
+                            {% elif method.payment_method == 'card' %}
+                                Card
+                            {% else %}
+                                Cash
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>{{ method.count }}</td>
+                    <td class="revenue-amount">KES {{ method.total|floatformat:2 }}</td>
+                    <td>
+                        {% widthratio method.total total_revenue 100 %}%
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {% widthratio method.total total_revenue 100 %}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No payment data available for this period.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Revenue by Operator -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-building"></i>
+            Revenue by Operator
+        </h3>
+        
+        {% if revenue_by_operator %}
+        <table class="revenue-table">
+            <thead>
+                <tr>
+                    <th>Operator</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                    <th>Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for operator in revenue_by_operator %}
+                <tr>
+                    <td>
+                        <strong>{{ operator.booking__trip__bus__operator__name }}</strong>
+                    </td>
+                    <td>{{ operator.count }}</td>
+                    <td class="revenue-amount">KES {{ operator.total|floatformat:2 }}</td>
+                    <td>
+                        {% widthratio operator.total total_revenue 100 %}%
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {% widthratio operator.total total_revenue 100 %}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No operator data available.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Top Performing Routes -->
+    <div class="report-section">
+        <h3>
+            <i class="bi bi-signpost-2"></i>
+            Top Revenue Routes
+        </h3>
+        
+        {% if revenue_by_route %}
+        <table class="revenue-table">
+            <thead>
+                <tr>
+                    <th>Route</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                    <th>Performance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for route in revenue_by_route %}
+                <tr>
+                    <td>
+                        <strong>{{ route.booking__trip__route__origin__name }}</strong>
+                        <i class="bi bi-arrow-right mx-2"></i>
+                        <strong>{{ route.booking__trip__route__destination__name }}</strong>
+                    </td>
+                    <td>{{ route.count }}</td>
+                    <td class="revenue-amount">KES {{ route.total|floatformat:2 }}</td>
+                    <td>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {% widthratio route.total total_revenue 100 %}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">No route data available.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

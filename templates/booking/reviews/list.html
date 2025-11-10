@@ -1,0 +1,396 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Reviews - Bus Booking Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .stat-card .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card.gold .stat-icon {
+        background: #fff8e1;
+        color: #f57c00;
+    }
+    
+    .stat-card.blue .stat-icon {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+    
+    .stat-card h3 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1a1a1a;
+    }
+    
+    .stat-card p {
+        color: #666;
+        margin: 0;
+        font-size: 0.875rem;
+    }
+    
+    .rating-distribution {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .rating-distribution h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+    }
+    
+    .rating-bar {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .rating-label {
+        min-width: 80px;
+        font-size: 0.875rem;
+        color: #666;
+    }
+    
+    .rating-progress {
+        flex: 1;
+        height: 24px;
+        background: #f5f5f5;
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .rating-progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+        border-radius: 6px;
+        transition: width 0.3s ease;
+    }
+    
+    .rating-count {
+        min-width: 40px;
+        text-align: right;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+    
+    .filter-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: white;
+        color: #666;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .filter-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    .filter-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .reviews-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    
+    .review-card {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e0e0e0;
+        transition: background 0.2s;
+    }
+    
+    .review-card:last-child {
+        border-bottom: none;
+    }
+    
+    .review-card:hover {
+        background: #f8f9fa;
+    }
+    
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .reviewer-info {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .reviewer-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.125rem;
+        flex-shrink: 0;
+    }
+    
+    .reviewer-details h4 {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+    
+    .reviewer-details p {
+        margin: 0.25rem 0 0;
+        font-size: 0.8125rem;
+        color: #666;
+    }
+    
+    .rating-stars {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .rating-stars i {
+        color: #ffd700;
+        font-size: 1.125rem;
+    }
+    
+    .rating-stars i.empty {
+        color: #e0e0e0;
+    }
+    
+    .review-meta {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.8125rem;
+        color: #666;
+    }
+    
+    .review-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .review-comment {
+        color: #1a1a1a;
+        line-height: 1.6;
+        font-size: 0.9375rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #666;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #e0e0e0;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Customer Reviews</h1>
+            <p class="text-muted mb-0">View and manage customer feedback</p>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <div class="stat-icon">
+                <i class="bi bi-star-fill"></i>
+            </div>
+            <h3>{{ total_reviews }}</h3>
+            <p>Total Reviews</p>
+        </div>
+        
+        <div class="stat-card gold">
+            <div class="stat-icon">
+                <i class="bi bi-award-fill"></i>
+            </div>
+            <h3>{{ average_rating }}</h3>
+            <p>Average Rating</p>
+        </div>
+    </div>
+    
+    <!-- Rating Distribution -->
+    <div class="rating-distribution">
+        <h3>Rating Distribution</h3>
+        {% for rating, count in rating_distribution.items %}
+        <div class="rating-bar">
+            <div class="rating-label">
+                {{ rating }} <i class="bi bi-star-fill text-warning"></i>
+            </div>
+            <div class="rating-progress">
+                <div class="rating-progress-fill" 
+                     style="width: {% if total_reviews > 0 %}{{ count|mul:100|div:total_reviews }}{% else %}0{% endif %}%">
+                </div>
+            </div>
+            <div class="rating-count">{{ count }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" action="{% url 'booking:review_list' %}">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Filter by Rating</label>
+                <div class="filter-buttons">
+                    <a href="?rating=" class="filter-btn {% if not rating_filter %}active{% endif %}">
+                        All Ratings
+                    </a>
+                    {% for i in "54321" %}
+                    <a href="?rating={{ i }}" class="filter-btn {% if rating_filter == i %}active{% endif %}">
+                        {{ i }} <i class="bi bi-star-fill"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div>
+                <label class="form-label fw-semibold">Search Reviews</label>
+                <input type="text" 
+                       name="search" 
+                       class="form-control" 
+                       placeholder="Search by customer name, bus, or comment..."
+                       value="{{ search_query }}">
+            </div>
+        </form>
+    </div>
+    
+    <!-- Reviews List -->
+    <div class="reviews-container">
+        {% if reviews %}
+            {% for review in reviews %}
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <div class="reviewer-avatar">
+                            {{ review.booking.customer_full_name|slice:":1"|upper }}
+                        </div>
+                        <div class="reviewer-details">
+                            <h4>{{ review.booking.customer_full_name }}</h4>
+                            <p>{{ review.created_at|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                    <div class="rating-stars">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= review.rating %}
+                                <i class="bi bi-star-fill"></i>
+                            {% else %}
+                                <i class="bi bi-star-fill empty"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="review-meta">
+                    <div class="review-meta-item">
+                        <i class="bi bi-bus-front"></i>
+                        <span>{{ review.bus.bus_name }}</span>
+                    </div>
+                    <div class="review-meta-item">
+                        <i class="bi bi-building"></i>
+                        <span>{{ review.bus.operator.name }}</span>
+                    </div>
+                    <div class="review-meta-item">
+                        <i class="bi bi-signpost-2"></i>
+                        <span>{{ review.booking.trip.route }}</span>
+                    </div>
+                    <div class="review-meta-item">
+                        <i class="bi bi-receipt"></i>
+                        <span>{{ review.booking.booking_reference }}</span>
+                    </div>
+                </div>
+                
+                {% if review.comment %}
+                <div class="review-comment">
+                    "{{ review.comment }}"
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-star"></i>
+            <h3>No reviews found</h3>
+            <p class="text-muted">
+                {% if search_query or rating_filter %}
+                    No reviews match your filter criteria.
+                {% else %}
+                    Customer reviews will appear here once they are submitted.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
