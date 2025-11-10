@@ -3527,66 +3527,197 @@ def export_revenue_pdf(date_from, date_to, total_revenue, total_transactions,
     response['Content-Disposition'] = f'attachment; filename="revenue_report_{date_from}_{date_to}.pdf"'
     return response
 
+
+from django.shortcuts import render
+from django.db.models import Sum, Count, Avg, F, Q
+from django.db.models.functions import TruncDate, TruncHour, ExtractWeekDay, ExtractHour
+from django.utils import timezone
+from datetime import timedelta, datetime
+from decimal import Decimal
+import json
+
 def booking_report(request):
-    """Booking statistics and analysis"""
+    """Enhanced booking statistics and analysis with comprehensive charts"""
+    
+    # Get filter parameters
     period = request.GET.get('period', 'month')
+    selected_operator = request.GET.get('operator', '')
+    selected_route = request.GET.get('route', '')
+    selected_status = request.GET.get('status', '')
+    
     today = timezone.now().date()
     
     # Determine date range
-    if period == 'day':
+    if period == 'today':
         date_from = today
+        date_to = today
+        prev_date_from = today - timedelta(days=1)
+        prev_date_to = today - timedelta(days=1)
+    elif period == 'yesterday':
+        date_from = today - timedelta(days=1)
+        date_to = today - timedelta(days=1)
+        prev_date_from = today - timedelta(days=2)
+        prev_date_to = today - timedelta(days=2)
     elif period == 'week':
         date_from = today - timedelta(days=7)
+        date_to = today
+        prev_date_from = today - timedelta(days=14)
+        prev_date_to = today - timedelta(days=7)
     elif period == 'month':
         date_from = today - timedelta(days=30)
-    else:
+        date_to = today
+        prev_date_from = today - timedelta(days=60)
+        prev_date_to = today - timedelta(days=30)
+    elif period == 'quarter':
         date_from = today - timedelta(days=90)
+        date_to = today
+        prev_date_from = today - timedelta(days=180)
+        prev_date_to = today - timedelta(days=90)
+    elif period == 'custom':
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        if start_date and end_date:
+            date_from = datetime.strptime(start_date, '%Y-%m-%d').date()
+            date_to = datetime.strptime(end_date, '%Y-%m-%d').date()
+            date_diff = (date_to - date_from).days
+            prev_date_from = date_from - timedelta(days=date_diff + 1)
+            prev_date_to = date_from - timedelta(days=1)
+        else:
+            date_from = today - timedelta(days=30)
+            date_to = today
+            prev_date_from = today - timedelta(days=60)
+            prev_date_to = today - timedelta(days=30)
+    else:
+        date_from = today - timedelta(days=30)
+        date_to = today
+        prev_date_from = today - timedelta(days=60)
+        prev_date_to = today - timedelta(days=30)
     
-    bookings = Booking.objects.filter(created_at__date__gte=date_from)
+    # Build base queryset with filters
+    bookings = Booking.objects.filter(
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to
+    )
     
-    # Statistics
+    if selected_operator:
+        bookings = bookings.filter(trip__bus__operator_id=selected_operator)
+    
+    if selected_route:
+        bookings = bookings.filter(trip__route_id=selected_route)
+    
+    if selected_status:
+        bookings = bookings.filter(status=selected_status)
+    
+    # Previous period bookings for comparison
+    prev_bookings = Booking.objects.filter(
+        created_at__date__gte=prev_date_from,
+        created_at__date__lte=prev_date_to
+    )
+    
+    # === KPI STATISTICS ===
     total_bookings = bookings.count()
+    prev_total_bookings = prev_bookings.count()
+    
     confirmed_bookings = bookings.filter(status__in=['confirmed', 'paid', 'completed']).count()
     pending_bookings = bookings.filter(status='pending').count()
     cancelled_bookings = bookings.filter(status='cancelled').count()
     
-    # Booking status distribution
+    # Calculate booking change percentage
+    if prev_total_bookings > 0:
+        booking_change = ((total_bookings - prev_total_bookings) / prev_total_bookings) * 100
+    else:
+        booking_change = 0
+    
+    # Total revenue from confirmed bookings
+    total_revenue = bookings.filter(
+        status__in=['paid', 'confirmed', 'completed']
+    ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+    
+    prev_revenue = prev_bookings.filter(
+        status__in=['paid', 'confirmed', 'completed']
+    ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+    
+    # Average booking value
+    avg_booking_value = bookings.aggregate(avg=Avg('total_amount'))['avg'] or Decimal('0')
+    
+    # Conversion rate (confirmed / total)
+    conversion_rate = (confirmed_bookings / total_bookings * 100) if total_bookings > 0 else 0
+    
+    # Cancellation rate
+    cancellation_rate = (cancelled_bookings / total_bookings * 100) if total_bookings > 0 else 0
+    
+    # === BOOKING STATUS DISTRIBUTION (Donut Chart) ===
     status_distribution = bookings.values('status').annotate(
         count=Count('id')
     ).order_by('-count')
     
-    # Bookings by route
+    status_labels = [item['status'].title() for item in status_distribution]
+    status_counts = [item['count'] for item in status_distribution]
+    
+    # === DAILY BOOKING TREND (Line Chart) ===
+    daily_bookings = bookings.annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('date')
+    
+    daily_labels = [item['date'].strftime('%b %d') for item in daily_bookings]
+    daily_counts = [item['count'] for item in daily_bookings]
+    daily_revenue_data = [float(item['revenue'] or 0) for item in daily_bookings]
+    
+    # === HOURLY BOOKING PATTERN (Bar Chart) ===
+    hourly_bookings = bookings.annotate(
+        hour=ExtractHour('created_at')
+    ).values('hour').annotate(
+        count=Count('id')
+    ).order_by('hour')
+    
+    hourly_labels = [f"{item['hour']:02d}:00" for item in hourly_bookings]
+    hourly_counts = [item['count'] for item in hourly_bookings]
+    
+    # === DAY OF WEEK ANALYSIS (Bar Chart) ===
+    day_of_week_bookings = bookings.annotate(
+        day=ExtractWeekDay('created_at')
+    ).values('day').annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('day')
+    
+    days_map = {1: 'Sunday', 2: 'Monday', 3: 'Tuesday', 4: 'Wednesday', 
+                5: 'Thursday', 6: 'Friday', 7: 'Saturday'}
+    dow_labels = [days_map.get(item['day'], '') for item in day_of_week_bookings]
+    dow_counts = [item['count'] for item in day_of_week_bookings]
+    
+    # === BOOKINGS BY ROUTE (Horizontal Bar Chart) ===
     bookings_by_route = bookings.values(
-        'trip__route__origin__name',
-        'trip__route__destination__name'
+        origin=F('trip__route__origin__name'),
+        destination=F('trip__route__destination__name')
     ).annotate(
         count=Count('id'),
         revenue=Sum('total_amount')
     ).order_by('-count')[:10]
     
-    # Bookings by operator
+    route_labels = [f"{item['origin']} → {item['destination']}" for item in bookings_by_route]
+    route_counts = [item['count'] for item in bookings_by_route]
+    route_revenue = [float(item['revenue'] or 0) for item in bookings_by_route]
+    
+    # === BOOKINGS BY OPERATOR (Pie Chart) ===
     bookings_by_operator = bookings.values(
-        'trip__bus__operator__name'
+        operator=F('trip__bus__operator__name')
     ).annotate(
         count=Count('id'),
         revenue=Sum('total_amount')
     ).order_by('-count')
     
-    # Daily booking trend
-    daily_bookings = bookings.annotate(
-        date=TruncDate('created_at')
-    ).values('date').annotate(
-        count=Count('id')
-    ).order_by('date')
+    operator_labels = [item['operator'] for item in bookings_by_operator]
+    operator_counts = [item['count'] for item in bookings_by_operator]
     
-    # Peak booking times
-    hourly_bookings = bookings.extra(
-        select={'hour': "EXTRACT(hour FROM created_at)"}
-    ).values('hour').annotate(
-        count=Count('id')
-    ).order_by('hour')
+    # Add percentage for operator data
+    for item in bookings_by_operator:
+        item['percentage'] = (item['count'] / total_bookings * 100) if total_bookings > 0 else 0
     
-    # Seat class preferences
+    # === SEAT CLASS PREFERENCES (Donut Chart) ===
     seat_class_stats = SeatBooking.objects.filter(
         booking__in=bookings
     ).values('seat__seat_class').annotate(
@@ -3594,26 +3725,163 @@ def booking_report(request):
         revenue=Sum('fare')
     ).order_by('-count')
     
-    # Average booking value
-    avg_booking_value = bookings.aggregate(avg=Avg('total_amount'))['avg'] or 0
+    seat_class_labels = [item['seat__seat_class'].upper() for item in seat_class_stats]
+    seat_class_counts = [item['count'] for item in seat_class_stats]
+    seat_class_revenue = [float(item['revenue'] or 0) for item in seat_class_stats]
+    
+    # === BUS TYPE PERFORMANCE (Bar Chart) ===
+    bus_type_stats = bookings.values(
+        bus_type=F('trip__bus__bus_type')
+    ).annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount'),
+        avg_fare=Avg('total_amount')
+    ).order_by('-count')
+    
+    bus_type_labels = [item['bus_type'].title() for item in bus_type_stats]
+    bus_type_counts = [item['count'] for item in bus_type_stats]
+    
+    # === BOARDING POINT POPULARITY (Bar Chart) ===
+    boarding_point_stats = bookings.values(
+        bp_name=F('boarding_point__name'),
+        bp_location=F('boarding_point__location__name')
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    boarding_labels = [f"{item['bp_location']} - {item['bp_name']}" for item in boarding_point_stats]
+    boarding_counts = [item['count'] for item in boarding_point_stats]
+    
+    # === DROPPING POINT POPULARITY (Bar Chart) ===
+    dropping_point_stats = bookings.values(
+        dp_name=F('dropping_point__name'),
+        dp_location=F('dropping_point__location__name')
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    dropping_labels = [f"{item['dp_location']} - {item['dp_name']}" for item in dropping_point_stats]
+    dropping_counts = [item['count'] for item in dropping_point_stats]
+    
+    # === BOOKING SOURCE ANALYSIS (Funnel) ===
+    # Track conversion from search to booking
+    booking_funnel = {
+        'total_bookings': total_bookings,
+        'pending': pending_bookings,
+        'confirmed': confirmed_bookings,
+        'cancelled': cancelled_bookings,
+        'completed': bookings.filter(status='completed').count()
+    }
+    
+    # === PEAK BOOKING TIMES HEATMAP DATA ===
+    peak_times = bookings.annotate(
+        hour=ExtractHour('created_at'),
+        day=ExtractWeekDay('created_at')
+    ).values('hour', 'day').annotate(
+        count=Count('id')
+    ).order_by('day', 'hour')
+    
+    # === CUSTOMER SEGMENTS ===
+    # First time vs returning customers
+    customer_segments = bookings.values('customer_email').annotate(
+        booking_count=Count('id')
+    )
+    
+    first_time_customers = sum(1 for c in customer_segments if c['booking_count'] == 1)
+    returning_customers = sum(1 for c in customer_segments if c['booking_count'] > 1)
+    
+    # === AVERAGE SEATS PER BOOKING ===
+    avg_seats_per_booking = SeatBooking.objects.filter(
+        booking__in=bookings
+    ).values('booking').annotate(
+        seat_count=Count('id')
+    ).aggregate(avg=Avg('seat_count'))['avg'] or 0
+    
+    # Prepare chart data as JSON
+    chart_data = {
+        # Line charts
+        'daily_labels': daily_labels,
+        'daily_counts': daily_counts,
+        'daily_revenue': daily_revenue_data,
+        
+        # Bar charts
+        'hourly_labels': hourly_labels,
+        'hourly_counts': hourly_counts,
+        'dow_labels': dow_labels,
+        'dow_counts': dow_counts,
+        'bus_type_labels': bus_type_labels,
+        'bus_type_counts': bus_type_counts,
+        'boarding_labels': boarding_labels,
+        'boarding_counts': boarding_counts,
+        'dropping_labels': dropping_labels,
+        'dropping_counts': dropping_counts,
+        
+        # Horizontal bar
+        'route_labels': route_labels,
+        'route_counts': route_counts,
+        'route_revenue': route_revenue,
+        
+        # Donut/Pie charts
+        'status_labels': status_labels,
+        'status_counts': status_counts,
+        'operator_labels': operator_labels,
+        'operator_counts': operator_counts,
+        'seat_class_labels': seat_class_labels,
+        'seat_class_counts': seat_class_counts,
+        'seat_class_revenue': seat_class_revenue,
+        
+        # Customer segments
+        'customer_segments': {
+            'first_time': first_time_customers,
+            'returning': returning_customers
+        }
+    }
+    
+    # Get filter options
+    operators = BusOperator.objects.filter(is_active=True)
+    routes = Route.objects.filter(is_active=True)
+    statuses = Booking.BOOKING_STATUS_CHOICES
     
     context = {
+        # Filters
         'period': period,
         'date_from': date_from,
+        'date_to': date_to,
+        'operators': operators,
+        'routes': routes,
+        'statuses': statuses,
+        'selected_operator': selected_operator,
+        'selected_route': selected_route,
+        'selected_status': selected_status,
+        
+        # KPIs
         'total_bookings': total_bookings,
+        'prev_total_bookings': prev_total_bookings,
+        'booking_change': round(booking_change, 1),
         'confirmed_bookings': confirmed_bookings,
         'pending_bookings': pending_bookings,
         'cancelled_bookings': cancelled_bookings,
-        'status_distribution': status_distribution,
+        'total_revenue': total_revenue,
+        'prev_revenue': prev_revenue,
+        'avg_booking_value': avg_booking_value,
+        'conversion_rate': round(conversion_rate, 1),
+        'cancellation_rate': round(cancellation_rate, 1),
+        'avg_seats_per_booking': round(avg_seats_per_booking, 2),
+        'first_time_customers': first_time_customers,
+        'returning_customers': returning_customers,
+        
+        # Charts data
+        'chart_data': json.dumps(chart_data),
+        
+        # Tables data
         'bookings_by_route': bookings_by_route,
         'bookings_by_operator': bookings_by_operator,
-        'daily_bookings': list(daily_bookings),
-        'hourly_bookings': list(hourly_bookings),
         'seat_class_stats': seat_class_stats,
-        'avg_booking_value': round(avg_booking_value, 2),
+        'bus_type_stats': bus_type_stats,
+        'booking_funnel': booking_funnel,
     }
+    
     return render(request, 'booking/reports/bookings.html', context)
-
 
 from django.shortcuts import render
 from django.db.models import Sum, Count, Avg, F, Q

@@ -1,11 +1,11 @@
 {% extends 'admin_base.html' %}
 {% load static %}
 
-{% block title %}Booking Reports - Bus Booking Admin{% endblock %}
+{% block title %}Booking Analytics - Comprehensive Reports{% endblock %}
 
 {% block extra_css %}
 <style>
-    .period-selector {
+    .filters-card {
         background: white;
         border-radius: 12px;
         padding: 1.5rem;
@@ -13,44 +13,56 @@
         margin-bottom: 1.5rem;
     }
     
-    .period-buttons {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-    
-    .period-btn {
-        padding: 0.625rem 1.25rem;
-        border-radius: 8px;
-        border: 1px solid #e0e0e0;
-        background: white;
-        color: #666;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-decoration: none;
-    }
-    
-    .period-btn:hover {
-        border-color: #667eea;
-        color: #667eea;
-    }
-    
-    .period-btn.active {
-        background: #667eea;
-        color: white;
-        border-color: #667eea;
-    }
-    
-    .booking-stats {
+    .filters-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
     
-    .stat-card {
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #666;
+    }
+    
+    .form-select, .form-control {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+    
+    .btn-filter {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.625rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .kpi-card {
         background: white;
         border-radius: 12px;
         padding: 1.5rem;
@@ -59,7 +71,7 @@
         overflow: hidden;
     }
     
-    .stat-card::before {
+    .kpi-card::before {
         content: '';
         position: absolute;
         top: 0;
@@ -68,67 +80,65 @@
         height: 100%;
     }
     
-    .stat-card.purple::before {
-        background: #667eea;
-    }
+    .kpi-card.blue::before { background: #2196f3; }
+    .kpi-card.green::before { background: #4caf50; }
+    .kpi-card.orange::before { background: #ff9800; }
+    .kpi-card.purple::before { background: #9c27b0; }
+    .kpi-card.red::before { background: #f44336; }
+    .kpi-card.teal::before { background: #009688; }
     
-    .stat-card.green::before {
-        background: #4caf50;
-    }
-    
-    .stat-card.orange::before {
-        background: #ff9800;
-    }
-    
-    .stat-card.red::before {
-        background: #f44336;
-    }
-    
-    .stat-icon {
-        width: 48px;
-        height: 48px;
+    .kpi-icon {
+        width: 56px;
+        height: 56px;
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 28px;
         margin-bottom: 1rem;
     }
     
-    .stat-card.purple .stat-icon {
-        background: #eef2ff;
-        color: #667eea;
-    }
+    .kpi-card.blue .kpi-icon { background: #e3f2fd; color: #2196f3; }
+    .kpi-card.green .kpi-icon { background: #e8f5e9; color: #4caf50; }
+    .kpi-card.orange .kpi-icon { background: #fff3e0; color: #ff9800; }
+    .kpi-card.purple .kpi-icon { background: #f3e5f5; color: #9c27b0; }
+    .kpi-card.red .kpi-icon { background: #ffebee; color: #f44336; }
+    .kpi-card.teal .kpi-icon { background: #e0f2f1; color: #009688; }
     
-    .stat-card.green .stat-icon {
-        background: #e8f5e9;
-        color: #4caf50;
-    }
-    
-    .stat-card.orange .stat-icon {
-        background: #fff3e0;
-        color: #ff9800;
-    }
-    
-    .stat-card.red .stat-icon {
-        background: #ffebee;
-        color: #f44336;
-    }
-    
-    .stat-card h3 {
+    .kpi-value {
         font-size: 2rem;
         font-weight: 700;
-        margin: 0 0 0.25rem;
         color: #1a1a1a;
+        margin: 0.5rem 0;
     }
     
-    .stat-card p {
+    .kpi-label {
         color: #666;
-        margin: 0;
         font-size: 0.875rem;
+        margin-bottom: 0.5rem;
     }
     
-    .status-chart {
+    .kpi-change {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .kpi-change.positive {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .kpi-change.negative {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .chart-container {
         background: white;
         border-radius: 12px;
         padding: 1.5rem;
@@ -136,115 +146,48 @@
         margin-bottom: 1.5rem;
     }
     
-    .status-chart h3 {
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .chart-title {
         font-size: 1.125rem;
         font-weight: 600;
-        margin-bottom: 1.5rem;
         color: #1a1a1a;
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        margin: 0;
     }
     
-    .status-chart h3 i {
+    .chart-title i {
         font-size: 1.5rem;
         color: #667eea;
     }
     
-    .status-item {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
+    .chart-canvas {
+        position: relative;
+        height: 350px;
     }
     
-    .status-color {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-    
-    .status-color.confirmed {
-        background: #4caf50;
-    }
-    
-    .status-color.pending {
-        background: #ff9800;
-    }
-    
-    .status-color.cancelled {
-        background: #f44336;
-    }
-    
-    .status-color.completed {
-        background: #2196f3;
-    }
-    
-    .status-info {
-        flex: 1;
-    }
-    
-    .status-name {
-        font-weight: 600;
-        color: #1a1a1a;
-        text-transform: capitalize;
-    }
-    
-    .status-progress {
-        height: 6px;
-        background: #e0e0e0;
-        border-radius: 3px;
-        margin-top: 0.5rem;
-        overflow: hidden;
-    }
-    
-    .status-progress-fill {
-        height: 100%;
-        border-radius: 3px;
-        transition: width 0.3s ease;
-    }
-    
-    .status-count {
-        font-weight: 700;
-        font-size: 1.25rem;
-        color: #1a1a1a;
-    }
-    
-    .report-section {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 1.5rem;
         margin-bottom: 1.5rem;
     }
     
-    .report-section h3 {
-        font-size: 1.125rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        color: #1a1a1a;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .report-section h3 i {
-        font-size: 1.5rem;
-        color: #667eea;
-    }
-    
-    .report-table {
+    .data-table {
         width: 100%;
         border-collapse: collapse;
     }
     
-    .report-table th {
+    .data-table th {
         background: #f8f9fa;
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         text-align: left;
         font-weight: 600;
         font-size: 0.875rem;
@@ -254,53 +197,41 @@
         border-bottom: 2px solid #e0e0e0;
     }
     
-    .report-table td {
-        padding: 1rem;
+    .data-table td {
+        padding: 0.875rem 1rem;
         border-bottom: 1px solid #e0e0e0;
+        font-size: 0.875rem;
     }
     
-    .report-table tr:hover {
+    .data-table tr:hover {
         background: #f8f9fa;
     }
     
     .progress-bar-container {
         background: #f5f5f5;
-        height: 8px;
-        border-radius: 4px;
+        height: 6px;
+        border-radius: 3px;
         overflow: hidden;
-        margin-top: 0.5rem;
+        margin-top: 0.25rem;
     }
     
     .progress-bar-fill {
         height: 100%;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        border-radius: 4px;
+        border-radius: 3px;
         transition: width 0.3s ease;
     }
-    
-    .seat-class-badge {
-        padding: 0.375rem 0.75rem;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-block;
-    }
-    
-    .seat-class-badge.vip {
-        background: #fce4ec;
-        color: #c2185b;
-    }
-    
-    .seat-class-badge.business {
-        background: #e1f5fe;
-        color: #0277bd;
-    }
-    
-    .seat-class-badge.normal {
-        background: #f3e5f5;
-        color: #7b1fa2;
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 {% endblock %}
 
 {% block content %}
@@ -308,241 +239,710 @@
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1 fw-bold">Booking Reports</h1>
-            <p class="text-muted mb-0">Analyze booking patterns and trends</p>
+            <h1 class="h3 mb-1 fw-bold">Booking Analytics Dashboard</h1>
+            <p class="text-muted mb-0">Comprehensive booking insights and trends</p>
         </div>
     </div>
     
-    <!-- Period Selector -->
-    <div class="period-selector">
-        <div class="period-buttons">
-            <a href="?period=day" class="period-btn {% if period == 'day' %}active{% endif %}">
-                Today
-            </a>
-            <a href="?period=week" class="period-btn {% if period == 'week' %}active{% endif %}">
-                Last 7 Days
-            </a>
-            <a href="?period=month" class="period-btn {% if period == 'month' or not period %}active{% endif %}">
-                Last 30 Days
-            </a>
-            <a href="?period=quarter" class="period-btn {% if period == 'quarter' %}active{% endif %}">
-                Last 90 Days
-            </a>
-        </div>
-    </div>
-    
-    <!-- Booking Statistics -->
-    <div class="booking-stats">
-        <div class="stat-card purple">
-            <div class="stat-icon">
-                <i class="bi bi-ticket-detailed"></i>
+    <!-- Advanced Filters -->
+    <div class="filters-card">
+        <form method="get" action="">
+            <div class="filters-grid">
+                <!-- Period Selection -->
+                <div class="filter-group">
+                    <label class="filter-label">Time Period</label>
+                    <select name="period" class="form-select" onchange="toggleCustomDates(this)">
+                        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                        <option value="week" {% if period == 'week' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>Last 30 Days</option>
+                        <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Last 90 Days</option>
+                        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                
+                <!-- Custom Date Range -->
+                <div class="filter-group" id="customDates" style="display: {% if period == 'custom' %}block{% else %}none{% endif %};">
+                    <label class="filter-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+                </div>
+                
+                <div class="filter-group" id="customDatesEnd" style="display: {% if period == 'custom' %}block{% else %}none{% endif %};">
+                    <label class="filter-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+                </div>
+                
+                <!-- Operator Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Bus Operator</label>
+                    <select name="operator" class="form-select">
+                        <option value="">All Operators</option>
+                        {% for operator in operators %}
+                        <option value="{{ operator.id }}" {% if selected_operator == operator.id|stringformat:"s" %}selected{% endif %}>
+                            {{ operator.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Route Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Route</label>
+                    <select name="route" class="form-select">
+                        <option value="">All Routes</option>
+                        {% for route in routes %}
+                        <option value="{{ route.id }}" {% if selected_route == route.id|stringformat:"s" %}selected{% endif %}>
+                            {{ route.origin.name }} → {{ route.destination.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Status Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">Booking Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for status_code, status_name in statuses %}
+                        <option value="{{ status_code }}" {% if selected_status == status_code %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-            <h3>{{ total_bookings }}</h3>
-            <p>Total Bookings</p>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted small">
+                    <i class="bi bi-calendar-range me-2"></i>
+                    Showing: <strong>{{ date_from|date:"M d, Y" }}</strong> to <strong>{{ date_to|date:"M d, Y" }}</strong>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'booking_report' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                    <button type="submit" class="btn-filter">
+                        <i class="bi bi-funnel me-2"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card blue">
+            <div class="kpi-icon">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <p class="kpi-label">Total Bookings</p>
+            <div class="kpi-value">{{ total_bookings }}</div>
+            {% if booking_change != 0 %}
+            <span class="kpi-change {% if booking_change > 0 %}positive{% else %}negative{% endif %}">
+                <i class="bi bi-arrow-{% if booking_change > 0 %}up{% else %}down{% endif %}"></i>
+                {{ booking_change|floatformat:1 }}% vs previous period
+            </span>
+            {% endif %}
         </div>
         
-        <div class="stat-card green">
-            <div class="stat-icon">
+        <div class="kpi-card green">
+            <div class="kpi-icon">
                 <i class="bi bi-check-circle"></i>
             </div>
-            <h3>{{ confirmed_bookings }}</h3>
-            <p>Confirmed</p>
+            <p class="kpi-label">Confirmed Bookings</p>
+            <div class="kpi-value">{{ confirmed_bookings }}</div>
+            <span class="kpi-change positive">
+                <i class="bi bi-graph-up"></i>
+                {{ conversion_rate|floatformat:1 }}% conversion rate
+            </span>
         </div>
         
-        <div class="stat-card orange">
-            <div class="stat-icon">
-                <i class="bi bi-clock"></i>
+        <div class="kpi-card orange">
+            <div class="kpi-icon">
+                <i class="bi bi-clock-history"></i>
             </div>
-            <h3>{{ pending_bookings }}</h3>
-            <p>Pending</p>
+            <p class="kpi-label">Pending Bookings</p>
+            <div class="kpi-value">{{ pending_bookings }}</div>
         </div>
         
-        <div class="stat-card red">
-            <div class="stat-icon">
+        <div class="kpi-card red">
+            <div class="kpi-icon">
                 <i class="bi bi-x-circle"></i>
             </div>
-            <h3>{{ cancelled_bookings }}</h3>
-            <p>Cancelled</p>
+            <p class="kpi-label">Cancelled Bookings</p>
+            <div class="kpi-value">{{ cancelled_bookings }}</div>
+            <span class="kpi-change negative">
+                <i class="bi bi-graph-down"></i>
+                {{ cancellation_rate|floatformat:1 }}% cancellation rate
+            </span>
+        </div>
+        
+        <div class="kpi-card purple">
+            <div class="kpi-icon">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <p class="kpi-label">Total Revenue</p>
+            <div class="kpi-value">KES {{ total_revenue|floatformat:2 }}</div>
+        </div>
+        
+        <div class="kpi-card teal">
+            <div class="kpi-icon">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <p class="kpi-label">Avg Booking Value</p>
+            <div class="kpi-value">KES {{ avg_booking_value|floatformat:2 }}</div>
         </div>
     </div>
     
-    <!-- Booking Status Distribution -->
-    <div class="status-chart">
-        <h3>
-            <i class="bi bi-pie-chart"></i>
-            Booking Status Distribution
-        </h3>
-        
-        {% for status in status_distribution %}
-        <div class="status-item">
-            <div class="status-color {{ status.status }}"></div>
-            <div class="status-info">
-                <div class="status-name">{{ status.status }}</div>
-                <div class="status-progress">
-                    <div class="status-progress-fill {{ status.status }}" 
-                         style="width: {% widthratio status.count total_bookings 100 %}%; 
-                                background: {% if status.status == 'confirmed' or status.status == 'paid' or status.status == 'completed' %}#4caf50{% elif status.status == 'pending' %}#ff9800{% else %}#f44336{% endif %}">
-                    </div>
-                </div>
-            </div>
-            <div class="status-count">{{ status.count }}</div>
+    <!-- Charts Row 1: Daily Trends (Dual Axis) -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">
+                <i class="bi bi-graph-up"></i>
+                Daily Booking & Revenue Trend
+            </h3>
         </div>
-        {% endfor %}
+        <div class="chart-canvas">
+            <canvas id="dailyTrendChart"></canvas>
+        </div>
     </div>
     
-    <!-- Bookings by Route -->
-    <div class="report-section">
-        <h3>
-            <i class="bi bi-signpost-2"></i>
-            Top Routes by Bookings
-        </h3>
-        
-        {% if bookings_by_route %}
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Route</th>
-                    <th>Bookings</th>
-                    <th>Revenue</th>
-                    <th>Performance</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for route in bookings_by_route %}
-                <tr>
-                    <td>
-                        <strong>{{ route.trip__route__origin__name }}</strong>
-                        <i class="bi bi-arrow-right mx-2 text-muted"></i>
-                        <strong>{{ route.trip__route__destination__name }}</strong>
-                    </td>
-                    <td><strong>{{ route.count }}</strong></td>
-                    <td class="text-success fw-bold">KES {{ route.revenue|floatformat:2 }}</td>
-                    <td>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {% widthratio route.count total_bookings 100 %}%"></div>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted text-center py-4">No booking data available.</p>
-        {% endif %}
-    </div>
-    
-    <!-- Bookings by Operator -->
-    <div class="report-section">
-        <h3>
-            <i class="bi bi-building"></i>
-            Bookings by Operator
-        </h3>
-        
-        {% if bookings_by_operator %}
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Operator</th>
-                    <th>Bookings</th>
-                    <th>Revenue</th>
-                    <th>Share</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for operator in bookings_by_operator %}
-                <tr>
-                    <td><strong>{{ operator.trip__bus__operator__name }}</strong></td>
-                    <td><strong>{{ operator.count }}</strong></td>
-                    <td class="text-success fw-bold">KES {{ operator.revenue|floatformat:2 }}</td>
-                    <td>
-                        {% widthratio operator.count total_bookings 100 %}%
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {% widthratio operator.count total_bookings 100 %}%"></div>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted text-center py-4">No operator data available.</p>
-        {% endif %}
-    </div>
-    
-    <!-- Seat Class Preferences -->
-    <div class="report-section">
-        <h3>
-            <i class="bi bi-chair"></i>
-            Seat Class Preferences
-        </h3>
-        
-        {% if seat_class_stats %}
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Seat Class</th>
-                    <th>Bookings</th>
-                    <th>Revenue</th>
-                    <th>Popularity</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for class_stat in seat_class_stats %}
-                <tr>
-                    <td>
-                        <span class="seat-class-badge {{ class_stat.seat__seat_class }}">
-                            {% if class_stat.seat__seat_class == 'vip' %}
-                                VIP
-                            {% elif class_stat.seat__seat_class == 'business' %}
-                                Business
-                            {% else %}
-                                Economy
-                            {% endif %}
-                        </span>
-                    </td>
-                    <td><strong>{{ class_stat.count }}</strong></td>
-                    <td class="text-success fw-bold">KES {{ class_stat.revenue|floatformat:2 }}</td>
-                    <td>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {% widthratio class_stat.count total_bookings 100 %}%"></div>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted text-center py-4">No seat class data available.</p>
-        {% endif %}
-    </div>
-    
-    <!-- Key Metrics -->
-    <div class="report-section">
-        <h3>
-            <i class="bi bi-graph-up"></i>
-            Key Metrics
-        </h3>
-        
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="p-3 bg-light rounded">
-                    <h4 class="h6 text-muted mb-2">Average Booking Value</h4>
-                    <p class="h4 mb-0 text-success fw-bold">KES {{ avg_booking_value|floatformat:2 }}</p>
-                </div>
+    <!-- Charts Row 2: Time Analysis -->
+    <div class="stats-grid">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-clock"></i>
+                    Hourly Booking Pattern
+                </h3>
             </div>
-            <div class="col-md-6">
-                <div class="p-3 bg-light rounded">
-                    <h4 class="h6 text-muted mb-2">Confirmation Rate</h4>
-                    <p class="h4 mb-0 text-primary fw-bold">
-                        {% if total_bookings > 0 %}
-                            {% widthratio confirmed_bookings total_bookings 100 %}%
-                        {% else %}
-                            0%
-                        {% endif %}
-                    </p>
-                </div>
+            <div class="chart-canvas">
+                <canvas id="hourlyChart"></canvas>
             </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-calendar-week"></i>
+                    Day of Week Distribution
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="dayOfWeekChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 3: Status & Operator Distribution -->
+    <div class="stats-grid">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-pie-chart"></i>
+                    Booking Status Distribution
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="statusDonutChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-building"></i>
+                    Bookings by Operator
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="operatorPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 4: Seat Class & Bus Type -->
+    <div class="stats-grid">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-pie-chart-fill"></i>
+                    Seat Class Preferences
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="seatClassChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-bus-front"></i>
+                    Bus Type Performance
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="busTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row 5: Route Performance -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">
+                <i class="bi bi-signpost-2"></i>
+                Top 10 Routes by Bookings
+            </h3>
+        </div>
+        <div class="chart-canvas">
+            <canvas id="routeBarChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Charts Row 6: Boarding & Dropping Points -->
+    <div class="stats-grid">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-geo-alt"></i>
+                    Top Boarding Points
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="boardingChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    Top Dropping Points
+                </h3>
+            </div>
+            <div class="chart-canvas">
+                <canvas id="droppingChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Customer Segments -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">
+                <i class="bi bi-people"></i>
+                Customer Segments
+            </h3>
+        </div>
+        <div class="chart-canvas">
+            <canvas id="customerSegmentChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Data Tables -->
+    <div class="stats-grid">
+        <!-- Top Routes Table -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-signpost-2"></i>
+                    Top Routes
+                </h3>
+            </div>
+            {% if bookings_by_route %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Bookings</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for route in bookings_by_route|slice:":5" %}
+                    <tr>
+                        <td>
+                            <strong>{{ route.origin }}</strong>
+                            <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                            <strong>{{ route.destination }}</strong>
+                        </td>
+                        <td>{{ route.count }}</td>
+                        <td class="text-success fw-bold">KES {{ route.revenue|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4">No route data available</p>
+            {% endif %}
+        </div>
+        
+        <!-- Top Operators Table -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="bi bi-building"></i>
+                    Top Operators
+                </h3>
+            </div>
+            {% if bookings_by_operator %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Bookings</th>
+                        <th>Share</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for operator in bookings_by_operator|slice:":5" %}
+                    <tr>
+                        <td><strong>{{ operator.operator }}</strong></td>
+                        <td>{{ operator.count }}</td>
+                        <td>
+                            {{ operator.percentage|floatformat:1 }}%
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: {{ operator.percentage }}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4">No operator data available</p>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Parse chart data from Django context
+    const chartData = {{ chart_data|safe }};
+    
+    // Common chart options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            }
+        }
+    };
+    
+    // 1. Daily Trend (Dual Axis - Line Chart with Bar)
+    new Chart(document.getElementById('dailyTrendChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.daily_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.daily_counts,
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                fill: true,
+                tension: 0.4,
+                yAxisID: 'y'
+            }, {
+                label: 'Revenue (KES)',
+                data: chartData.daily_revenue,
+                borderColor: 'rgb(76, 175, 80)',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                fill: true,
+                tension: 0.4,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Bookings'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Revenue (KES)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // 2. Hourly Pattern
+    new Chart(document.getElementById('hourlyChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.hourly_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.hourly_counts,
+                backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                borderColor: 'rgb(102, 126, 234)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 3. Day of Week
+    new Chart(document.getElementById('dayOfWeekChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.dow_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.dow_counts,
+                backgroundColor: 'rgba(156, 39, 176, 0.7)',
+                borderColor: 'rgb(156, 39, 176)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 4. Status Distribution Donut
+    new Chart(document.getElementById('statusDonutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: chartData.status_labels,
+            datasets: [{
+                data: chartData.status_counts,
+                backgroundColor: [
+                    'rgba(76, 175, 80, 0.8)',
+                    'rgba(33, 150, 243, 0.8)',
+                    'rgba(255, 152, 0, 0.8)',
+                    'rgba(244, 67, 54, 0.8)',
+                    'rgba(156, 39, 176, 0.8)',
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            ...commonOptions,
+            cutout: '70%'
+        }
+    });
+    
+    // 5. Operator Pie Chart
+    new Chart(document.getElementById('operatorPieChart'), {
+        type: 'pie',
+        data: {
+            labels: chartData.operator_labels,
+            datasets: [{
+                data: chartData.operator_counts,
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(76, 175, 80, 0.8)',
+                    'rgba(255, 152, 0, 0.8)',
+                    'rgba(33, 150, 243, 0.8)',
+                    'rgba(156, 39, 176, 0.8)',
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: commonOptions
+    });
+    
+    // 6. Seat Class Donut
+    new Chart(document.getElementById('seatClassChart'), {
+        type: 'doughnut',
+        data: {
+            labels: chartData.seat_class_labels,
+            datasets: [{
+                data: chartData.seat_class_counts,
+                backgroundColor: [
+                    'rgba(156, 39, 176, 0.8)',
+                    'rgba(33, 150, 243, 0.8)',
+                    'rgba(102, 126, 234, 0.8)',
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            ...commonOptions,
+            cutout: '70%'
+        }
+    });
+    
+    // 7. Bus Type Bar Chart
+    new Chart(document.getElementById('busTypeChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.bus_type_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.bus_type_counts,
+                backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                borderColor: 'rgb(33, 150, 243)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 8. Route Horizontal Bar Chart
+    new Chart(document.getElementById('routeBarChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.route_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.route_counts,
+                backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                borderColor: 'rgb(76, 175, 80)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 9. Boarding Points
+    new Chart(document.getElementById('boardingChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.boarding_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.boarding_counts,
+                backgroundColor: 'rgba(255, 152, 0, 0.7)',
+                borderColor: 'rgb(255, 152, 0)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 10. Dropping Points
+    new Chart(document.getElementById('droppingChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.dropping_labels,
+            datasets: [{
+                label: 'Bookings',
+                data: chartData.dropping_counts,
+                backgroundColor: 'rgba(0, 150, 136, 0.7)',
+                borderColor: 'rgb(0, 150, 136)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // 11. Customer Segments
+    new Chart(document.getElementById('customerSegmentChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['First Time Customers', 'Returning Customers'],
+            datasets: [{
+                data: [
+                    chartData.customer_segments.first_time,
+                    chartData.customer_segments.returning
+                ],
+                backgroundColor: [
+                    'rgba(33, 150, 243, 0.8)',
+                    'rgba(76, 175, 80, 0.8)',
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            ...commonOptions,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Toggle custom date fields
+    function toggleCustomDates(select) {
+        const customDates = document.getElementById('customDates');
+        const customDatesEnd = document.getElementById('customDatesEnd');
+        if (select.value === 'custom') {
+            customDates.style.display = 'block';
+            customDatesEnd.style.display = 'block';
+        } else {
+            customDates.style.display = 'none';
+            customDatesEnd.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}
