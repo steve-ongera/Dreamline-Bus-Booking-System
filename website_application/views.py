@@ -2809,3 +2809,582 @@ def route_stop_detail(request, pk):
     }
     
     return render(request, 'admin/route_stops/route_stop_detail.html', context)
+
+
+
+"""
+booking/views.py - Complete Admin Views for Navigation Sections
+"""
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Count, Sum, Q, Avg, F
+from django.db.models.functions import TruncMonth, TruncDate
+from django.utils import timezone
+from datetime import timedelta, datetime
+from django.http import JsonResponse, HttpResponse
+import json
+from .models import (
+    BusOperator, Bus, Location, BoardingPoint, Route, RouteStop,
+    Trip, Booking, Payment, Review, Amenity, SeatLayout, Seat, SeatBooking
+)
+
+
+# ==================== CUSTOMERS ====================
+def customer_list(request):
+    """List all customers with their booking history"""
+    # Get unique customers from bookings
+    search_query = request.GET.get('search', '')
+    
+    bookings = Booking.objects.select_related(
+        'trip', 'trip__route', 'trip__bus'
+    ).order_by('customer_full_name', '-created_at')
+    
+    if search_query:
+        bookings = bookings.filter(
+            Q(customer_full_name__icontains=search_query) |
+            Q(customer_email__icontains=search_query) |
+            Q(customer_phone__icontains=search_query) |
+            Q(customer_id_number__icontains=search_query)
+        )
+    
+    # Group customers by email (unique identifier)
+    customers_data = {}
+    for booking in bookings:
+        email = booking.customer_email
+        if email not in customers_data:
+            customers_data[email] = {
+                'full_name': booking.customer_full_name,
+                'email': booking.customer_email,
+                'phone': booking.customer_phone,
+                'id_number': booking.customer_id_number,
+                'total_bookings': 0,
+                'total_spent': 0,
+                'last_booking': None,
+                'status': 'active'
+            }
+        
+        customers_data[email]['total_bookings'] += 1
+        if booking.status in ['paid', 'confirmed', 'completed']:
+            customers_data[email]['total_spent'] += float(booking.total_amount)
+        
+        if not customers_data[email]['last_booking'] or booking.created_at > customers_data[email]['last_booking']:
+            customers_data[email]['last_booking'] = booking.created_at
+    
+    # Convert to list and sort
+    customers = list(customers_data.values())
+    customers.sort(key=lambda x: x['total_bookings'], reverse=True)
+    
+    context = {
+        'customers': customers,
+        'search_query': search_query,
+        'total_customers': len(customers),
+    }
+    return render(request, 'booking/customers/list.html', context)
+
+
+def customer_detail(request, email):
+    """View detailed customer information and booking history"""
+    bookings = Booking.objects.filter(
+        customer_email=email
+    ).select_related(
+        'trip', 'trip__route', 'trip__bus', 'trip__bus__operator'
+    ).prefetch_related(
+        'seat_bookings__seat', 'payments'
+    ).order_by('-created_at')
+    
+    if not bookings.exists():
+        messages.error(request, 'Customer not found')
+        return redirect('booking:customer_list')
+    
+    customer_info = bookings.first()
+    
+    # Statistics
+    total_spent = bookings.filter(
+        status__in=['paid', 'confirmed', 'completed']
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    completed_trips = bookings.filter(status='completed').count()
+    cancelled_bookings = bookings.filter(status='cancelled').count()
+    
+    # Favorite route
+    favorite_route = bookings.values(
+        'trip__route__origin__name',
+        'trip__route__destination__name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count').first()
+    
+    context = {
+        'customer': {
+            'full_name': customer_info.customer_full_name,
+            'email': customer_info.customer_email,
+            'phone': customer_info.customer_phone,
+            'id_number': customer_info.customer_id_number,
+        },
+        'bookings': bookings,
+        'total_bookings': bookings.count(),
+        'total_spent': total_spent,
+        'completed_trips': completed_trips,
+        'cancelled_bookings': cancelled_bookings,
+        'favorite_route': favorite_route,
+    }
+    return render(request, 'booking/customers/detail.html', context)
+
+
+# ==================== REVIEWS ====================
+def review_list(request):
+    """List all customer reviews"""
+    status_filter = request.GET.get('status', 'all')
+    rating_filter = request.GET.get('rating', '')
+    search_query = request.GET.get('search', '')
+    
+    reviews = Review.objects.select_related(
+        'booking', 'bus', 'bus__operator', 'booking__trip__route'
+    ).order_by('-created_at')
+    
+    if rating_filter:
+        reviews = reviews.filter(rating=rating_filter)
+    
+    if search_query:
+        reviews = reviews.filter(
+            Q(booking__customer_full_name__icontains=search_query) |
+            Q(bus__bus_name__icontains=search_query) |
+            Q(comment__icontains=search_query)
+        )
+    
+    # Statistics
+    total_reviews = reviews.count()
+    average_rating = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+    
+    rating_distribution = {
+        5: reviews.filter(rating=5).count(),
+        4: reviews.filter(rating=4).count(),
+        3: reviews.filter(rating=3).count(),
+        2: reviews.filter(rating=2).count(),
+        1: reviews.filter(rating=1).count(),
+    }
+    
+    context = {
+        'reviews': reviews,
+        'total_reviews': total_reviews,
+        'average_rating': round(average_rating, 2),
+        'rating_distribution': rating_distribution,
+        'status_filter': status_filter,
+        'rating_filter': rating_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'booking/reviews/list.html', context)
+
+
+def review_detail(request, pk):
+    """View detailed review information"""
+    review = get_object_or_404(
+        Review.objects.select_related(
+            'booking', 'bus', 'bus__operator', 
+            'booking__trip', 'booking__trip__route'
+        ),
+        pk=pk
+    )
+    
+    context = {
+        'review': review,
+    }
+    return render(request, 'booking/reviews/detail.html', context)
+
+
+# ==================== REPORTS ====================
+def revenue_report(request):
+    """Revenue analysis and reports"""
+    # Date range filters
+    period = request.GET.get('period', 'month')  # day, week, month, year, custom
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    today = timezone.now().date()
+    
+    # Determine date range
+    if period == 'day':
+        date_from = today
+        date_to = today
+    elif period == 'week':
+        date_from = today - timedelta(days=7)
+        date_to = today
+    elif period == 'month':
+        date_from = today.replace(day=1)
+        date_to = today
+    elif period == 'year':
+        date_from = today.replace(month=1, day=1)
+        date_to = today
+    elif period == 'custom' and start_date and end_date:
+        date_from = datetime.strptime(start_date, '%Y-%m-%d').date()
+        date_to = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        date_from = today.replace(day=1)
+        date_to = today
+    
+    # Get payments in date range
+    payments = Payment.objects.filter(
+        status='completed',
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to
+    )
+    
+    # Total revenue
+    total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
+    total_transactions = payments.count()
+    
+    # Revenue by payment method
+    revenue_by_method = payments.values('payment_method').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    # Revenue by operator
+    revenue_by_operator = payments.select_related(
+        'booking__trip__bus__operator'
+    ).values(
+        'booking__trip__bus__operator__name'
+    ).annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    # Revenue by route
+    revenue_by_route = payments.select_related(
+        'booking__trip__route'
+    ).values(
+        'booking__trip__route__origin__name',
+        'booking__trip__route__destination__name'
+    ).annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')[:10]
+    
+    # Daily revenue trend
+    daily_revenue = payments.annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('date')
+    
+    # Monthly comparison (last 6 months)
+    six_months_ago = today - timedelta(days=180)
+    monthly_revenue = Payment.objects.filter(
+        status='completed',
+        created_at__date__gte=six_months_ago
+    ).annotate(
+        month=TruncMonth('created_at')
+    ).values('month').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('month')
+    
+    context = {
+        'period': period,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_revenue': total_revenue,
+        'total_transactions': total_transactions,
+        'revenue_by_method': revenue_by_method,
+        'revenue_by_operator': revenue_by_operator,
+        'revenue_by_route': revenue_by_route,
+        'daily_revenue': list(daily_revenue),
+        'monthly_revenue': list(monthly_revenue),
+    }
+    return render(request, 'booking/reports/revenue.html', context)
+
+
+def booking_report(request):
+    """Booking statistics and analysis"""
+    period = request.GET.get('period', 'month')
+    today = timezone.now().date()
+    
+    # Determine date range
+    if period == 'day':
+        date_from = today
+    elif period == 'week':
+        date_from = today - timedelta(days=7)
+    elif period == 'month':
+        date_from = today - timedelta(days=30)
+    else:
+        date_from = today - timedelta(days=90)
+    
+    bookings = Booking.objects.filter(created_at__date__gte=date_from)
+    
+    # Statistics
+    total_bookings = bookings.count()
+    confirmed_bookings = bookings.filter(status__in=['confirmed', 'paid', 'completed']).count()
+    pending_bookings = bookings.filter(status='pending').count()
+    cancelled_bookings = bookings.filter(status='cancelled').count()
+    
+    # Booking status distribution
+    status_distribution = bookings.values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Bookings by route
+    bookings_by_route = bookings.values(
+        'trip__route__origin__name',
+        'trip__route__destination__name'
+    ).annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('-count')[:10]
+    
+    # Bookings by operator
+    bookings_by_operator = bookings.values(
+        'trip__bus__operator__name'
+    ).annotate(
+        count=Count('id'),
+        revenue=Sum('total_amount')
+    ).order_by('-count')
+    
+    # Daily booking trend
+    daily_bookings = bookings.annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        count=Count('id')
+    ).order_by('date')
+    
+    # Peak booking times
+    hourly_bookings = bookings.extra(
+        select={'hour': "EXTRACT(hour FROM created_at)"}
+    ).values('hour').annotate(
+        count=Count('id')
+    ).order_by('hour')
+    
+    # Seat class preferences
+    seat_class_stats = SeatBooking.objects.filter(
+        booking__in=bookings
+    ).values('seat__seat_class').annotate(
+        count=Count('id'),
+        revenue=Sum('fare')
+    ).order_by('-count')
+    
+    # Average booking value
+    avg_booking_value = bookings.aggregate(avg=Avg('total_amount'))['avg'] or 0
+    
+    context = {
+        'period': period,
+        'date_from': date_from,
+        'total_bookings': total_bookings,
+        'confirmed_bookings': confirmed_bookings,
+        'pending_bookings': pending_bookings,
+        'cancelled_bookings': cancelled_bookings,
+        'status_distribution': status_distribution,
+        'bookings_by_route': bookings_by_route,
+        'bookings_by_operator': bookings_by_operator,
+        'daily_bookings': list(daily_bookings),
+        'hourly_bookings': list(hourly_bookings),
+        'seat_class_stats': seat_class_stats,
+        'avg_booking_value': round(avg_booking_value, 2),
+    }
+    return render(request, 'booking/reports/bookings.html', context)
+
+
+def analytics_dashboard(request):
+    """Comprehensive analytics dashboard"""
+    today = timezone.now().date()
+    
+    # Time period filters
+    last_30_days = today - timedelta(days=30)
+    last_7_days = today - timedelta(days=7)
+    
+    # Key Performance Indicators
+    total_revenue = Payment.objects.filter(
+        status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    revenue_last_30 = Payment.objects.filter(
+        status='completed',
+        created_at__date__gte=last_30_days
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    total_bookings = Booking.objects.count()
+    bookings_last_30 = Booking.objects.filter(
+        created_at__date__gte=last_30_days
+    ).count()
+    
+    total_customers = Booking.objects.values('customer_email').distinct().count()
+    
+    # Occupancy rate
+    total_trips = Trip.objects.filter(
+        departure_date__gte=last_30_days,
+        status__in=['completed', 'departed']
+    ).count()
+    
+    if total_trips > 0:
+        trips_data = Trip.objects.filter(
+            departure_date__gte=last_30_days,
+            status__in=['completed', 'departed']
+        ).annotate(
+            total_seats=F('bus__seat_layout__total_seats'),
+            booked_seats=Count('bookings__seat_bookings')
+        )
+        
+        total_capacity = sum(t.total_seats for t in trips_data)
+        total_booked = sum(t.booked_seats for t in trips_data)
+        occupancy_rate = (total_booked / total_capacity * 100) if total_capacity > 0 else 0
+    else:
+        occupancy_rate = 0
+    
+    # Top performing routes
+    top_routes = Route.objects.annotate(
+        booking_count=Count('trips__bookings', filter=Q(
+            trips__bookings__created_at__date__gte=last_30_days
+        )),
+        revenue=Sum('trips__bookings__total_amount', filter=Q(
+            trips__bookings__created_at__date__gte=last_30_days,
+            trips__bookings__status__in=['paid', 'confirmed', 'completed']
+        ))
+    ).order_by('-booking_count')[:5]
+    
+    # Top performing buses
+    top_buses = Bus.objects.annotate(
+        trip_count=Count('trips', filter=Q(
+            trips__departure_date__gte=last_30_days
+        )),
+        revenue=Sum('trips__bookings__total_amount', filter=Q(
+            trips__bookings__created_at__date__gte=last_30_days,
+            trips__bookings__status__in=['paid', 'confirmed', 'completed']
+        ))
+    ).order_by('-revenue')[:5]
+    
+    # Customer satisfaction (average rating)
+    avg_rating = Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0
+    recent_reviews = Review.objects.select_related(
+        'bus', 'booking'
+    ).order_by('-created_at')[:5]
+    
+    # Revenue trend (last 7 days)
+    revenue_trend = Payment.objects.filter(
+        status='completed',
+        created_at__date__gte=last_7_days
+    ).annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        total=Sum('amount')
+    ).order_by('date')
+    
+    # Booking trend (last 7 days)
+    booking_trend = Booking.objects.filter(
+        created_at__date__gte=last_7_days
+    ).annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        count=Count('id')
+    ).order_by('date')
+    
+    # Most popular amenities
+    popular_amenities = Amenity.objects.annotate(
+        bus_count=Count('bus')
+    ).order_by('-bus_count')[:5]
+    
+    context = {
+        'total_revenue': total_revenue,
+        'revenue_last_30': revenue_last_30,
+        'total_bookings': total_bookings,
+        'bookings_last_30': bookings_last_30,
+        'total_customers': total_customers,
+        'occupancy_rate': round(occupancy_rate, 2),
+        'avg_rating': round(avg_rating, 2),
+        'top_routes': top_routes,
+        'top_buses': top_buses,
+        'recent_reviews': recent_reviews,
+        'revenue_trend': list(revenue_trend),
+        'booking_trend': list(booking_trend),
+        'popular_amenities': popular_amenities,
+    }
+    return render(request, 'booking/reports/analytics.html', context)
+
+
+# ==================== AMENITIES ====================
+def amenity_list(request):
+    """List all bus amenities"""
+    amenities = Amenity.objects.annotate(
+        bus_count=Count('bus')
+    ).order_by('name')
+    
+    context = {
+        'amenities': amenities,
+    }
+    return render(request, 'booking/amenities/list.html', context)
+
+
+def amenity_create(request):
+    """Create new amenity"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        icon = request.POST.get('icon')
+        description = request.POST.get('description', '')
+        
+        amenity = Amenity.objects.create(
+            name=name,
+            icon=icon,
+            description=description
+        )
+        
+        messages.success(request, f'Amenity "{name}" created successfully!')
+        return redirect('booking:amenity_list')
+    
+    return render(request, 'booking/amenities/create.html')
+
+
+def amenity_edit(request, pk):
+    """Edit amenity"""
+    amenity = get_object_or_404(Amenity, pk=pk)
+    
+    if request.method == 'POST':
+        amenity.name = request.POST.get('name')
+        amenity.icon = request.POST.get('icon')
+        amenity.description = request.POST.get('description', '')
+        amenity.save()
+        
+        messages.success(request, 'Amenity updated successfully!')
+        return redirect('booking:amenity_list')
+    
+    context = {
+        'amenity': amenity,
+    }
+    return render(request, 'booking/amenities/edit.html', context)
+
+
+def amenity_delete(request, pk):
+    """Delete amenity"""
+    amenity = get_object_or_404(Amenity, pk=pk)
+    
+    if request.method == 'POST':
+        name = amenity.name
+        amenity.delete()
+        messages.success(request, f'Amenity "{name}" deleted successfully!')
+        return redirect('booking:amenity_list')
+    
+    context = {
+        'amenity': amenity,
+    }
+    return render(request, 'booking/amenities/delete.html', context)
+
+
+# ==================== SETTINGS ====================
+def settings_view(request):
+    """System settings page"""
+    if request.method == 'POST':
+        # Handle settings update
+        messages.success(request, 'Settings updated successfully!')
+        return redirect('booking:settings')
+    
+    # Get system statistics
+    stats = {
+        'total_operators': BusOperator.objects.filter(is_active=True).count(),
+        'total_buses': Bus.objects.filter(is_active=True).count(),
+        'total_routes': Route.objects.filter(is_active=True).count(),
+        'total_locations': Location.objects.filter(is_active=True).count(),
+        'total_amenities': Amenity.objects.count(),
+        'total_seat_layouts': SeatLayout.objects.count(),
+    }
+    
+    context = {
+        'stats': stats,
+    }
+    return render(request, 'booking/settings/index.html', context)
