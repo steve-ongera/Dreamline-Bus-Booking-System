@@ -5,8 +5,6 @@ urlpatterns = [
     # Main views
     path('', views.home_view, name='home'),
     path('search/', views.search_results_view, name='search_results'),
-    
-    # AJAX API endpoints
     path('api/autocomplete/', views.api_autocomplete_locations, name='api_autocomplete'),
     path('api/search-trips/', views.api_search_trips, name='api_search_trips'),
     path('api/trips/<int:trip_id>/seats/', views.api_get_seats, name='api_get_seats'),
@@ -15,35 +13,24 @@ urlpatterns = [
     path('api/seats/unlock/', views.api_unlock_seat, name='api_unlock_seat'),
     path('api/calculate-total/', views.api_calculate_total, name='api_calculate_total'),
     path('api/create-booking/', views.api_create_booking, name='api_create_booking'),
-
-    #admin views
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    # Bus URLs
     path('buses/', views.bus_list, name='bus_list'),
     path('buses/add/', views.bus_form, name='bus_add'),
     path('buses/<int:pk>/', views.bus_detail, name='bus_detail'),
     path('buses/<int:pk>/edit/', views.bus_form, name='bus_edit'),
     path('buses/<int:pk>/delete/', views.bus_delete, name='bus_delete'),
     path('buses/<int:pk>/toggle-status/', views.bus_toggle_status, name='bus_toggle_status'),
-    
-    # Operator URLs
     path('operators/', views.operator_list, name='operator_list'),
     path('operators/add/', views.operator_form, name='operator_add'),
     path('operators/<int:pk>/', views.operator_detail, name='operator_detail'),
     path('operators/<int:pk>/edit/', views.operator_form, name='operator_edit'),
     path('operators/<int:pk>/delete/', views.operator_delete, name='operator_delete'),
-    
-    # Seat Layout URLs
     path('layouts/', views.layout_list, name='layout_list'),
     path('layouts/add/', views.layout_form, name='layout_add'),
     path('layouts/<int:pk>/', views.layout_detail, name='layout_detail'),
     path('layouts/<int:pk>/edit/', views.layout_form, name='layout_edit'),
     path('layouts/<int:pk>/delete/', views.layout_delete, name='layout_delete'),
-    
-    # AJAX/API URLs
     path('buses/layout/<int:pk>/preview/', views.get_layout_preview, name='layout_preview'),
-
-    # Trip URLs
     path('trips/', views.trip_list, name='trip_list'),
     path('trips/add/', views.trip_form, name='trip_add'),
     path('trips/<int:pk>/', views.trip_detail, name='trip_detail'),
@@ -52,39 +39,37 @@ urlpatterns = [
     path('trips/<int:pk>/update-status/', views.update_trip_status, name='update_trip_status'),
     path('trips/<int:pk>/cancel/', views.cancel_trip, name='cancel_trip'),
     path('trips/history/', views.trip_history, name='trip_history'),
-    
-    # AJAX/API URLs
     path('trips/route/<int:route_id>/details/', views.get_route_details, name='route_details'),
-
-    # Booking Management
     path('admin-bookings/', views.booking_list, name='booking_list'),
     path('admin-bookings/<int:booking_id>/', views.booking_detail, name='booking_detail'),
     path('admin-bookings/<int:booking_id>/cancel/', views.cancel_booking, name='cancel_booking'),
     path('admin-bookings/pending-payments/', views.pending_payments, name='pending_payments'),
     path('admin-bookings/export/', views.export_bookings, name='export_bookings'),
-    
-    # Payment Management
     path('admin-payments/', views.payment_list, name='payment_list'),
     path('admin-payments/export/', views.export_payments, name='export_payments'),
-
-    # Route Management
     path('routes/', views.route_list, name='route_list'),
     path('routes/<int:pk>/', views.route_detail, name='route_detail'),
     path('routes/<int:pk>/edit/', views.route_edit, name='route_edit'),
     path('routes/create/', views.route_create, name='route_create'),
     path('api/boarding-points/location/<int:location_id>/', views.get_boarding_points_by_location, name='get_boarding_points_by_location'),
     path('api/routes/<int:pk>/validate/', views.validate_route_stops, name='validate_route_stops'),
-    
-    # Locations
     path('locations/', views.location_list, name='location_list'),
     path('locations/<int:pk>/', views.location_detail, name='location_detail'),
-    
-    # Boarding Points
     path('boarding-points/', views.boarding_point_list, name='boarding_point_list'),
     path('boarding-points/<int:pk>/', views.boarding_point_detail, name='boarding_point_detail'),
-    
-    # Route Stops
     path('route-stops/', views.route_stop_list, name='route_stop_list'),
     path('route-stops/<int:pk>/', views.route_stop_detail, name='route_stop_detail'),
+    path('customers/', views.customer_list, name='customer_list'),
+    path('customers/<str:email>/', views.customer_detail, name='customer_detail'),
+    path('reviews/', views.review_list, name='review_list'),
+    path('reviews/<int:pk>/', views.review_detail, name='review_detail'),
+    path('reports/revenue/', views.revenue_report, name='revenue_report'),
+    path('reports/bookings/', views.booking_report, name='booking_report'),
+    path('reports/analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    path('amenities/', views.amenity_list, name='amenity_list'),
+    path('amenities/create/', views.amenity_create, name='amenity_create'),
+    path('amenities/<int:pk>/edit/', views.amenity_edit, name='amenity_edit'),
+    path('amenities/<int:pk>/delete/', views.amenity_delete, name='amenity_delete'),
+    path('settings/', views.settings_view, name='settings'),
     
 ]
