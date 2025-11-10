@@ -2992,75 +2992,196 @@ def review_detail(request, pk):
     return render(request, 'booking/reviews/detail.html', context)
 
 
-# ==================== REPORTS ====================
+"""
+booking/views.py - Dynamic Revenue Reports with Export & Analytics
+"""
+from django.shortcuts import render
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Count, Sum, Q, Avg, F
+from django.db.models.functions import TruncDate, TruncMonth, TruncWeek, TruncDay
+from django.utils import timezone
+from datetime import timedelta, datetime
+import csv
+import json
+from io import BytesIO
+from .models import Payment, Booking, BusOperator, Route, Bus
+from django.db.models import Sum, Count
+from django.db.models import IntegerField
+from django.db.models.expressions import RawSQL
+
+# Optional: For PDF export
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
+
 def revenue_report(request):
-    """Revenue analysis and reports"""
-    # Date range filters
-    period = request.GET.get('period', 'month')  # day, week, month, year, custom
+    """Dynamic Revenue Analysis with Advanced Filtering and Exports"""
+    
+    # ==================== FILTERS ====================
+    period = request.GET.get('period', 'month')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # Additional Filters
+    operator_id = request.GET.get('operator')
+    route_id = request.GET.get('route')
+    payment_method = request.GET.get('payment_method')
+    bus_type = request.GET.get('bus_type')
+    
+    # Export format
+    export_format = request.GET.get('export')  # csv, pdf, json
+    
     today = timezone.now().date()
     
-    # Determine date range
-    if period == 'day':
+    # ==================== DATE RANGE ====================
+    if period == 'today':
         date_from = today
         date_to = today
+    elif period == 'yesterday':
+        date_from = today - timedelta(days=1)
+        date_to = today - timedelta(days=1)
     elif period == 'week':
         date_from = today - timedelta(days=7)
         date_to = today
+    elif period == 'last_week':
+        date_from = today - timedelta(days=14)
+        date_to = today - timedelta(days=7)
     elif period == 'month':
         date_from = today.replace(day=1)
+        date_to = today
+    elif period == 'last_month':
+        # Get first day of last month
+        first_day_this_month = today.replace(day=1)
+        last_day_last_month = first_day_this_month - timedelta(days=1)
+        date_from = last_day_last_month.replace(day=1)
+        date_to = last_day_last_month
+    elif period == 'quarter':
+        # Current quarter
+        current_quarter = (today.month - 1) // 3
+        date_from = today.replace(month=current_quarter * 3 + 1, day=1)
         date_to = today
     elif period == 'year':
         date_from = today.replace(month=1, day=1)
         date_to = today
+    elif period == 'last_year':
+        date_from = today.replace(year=today.year - 1, month=1, day=1)
+        date_to = today.replace(year=today.year - 1, month=12, day=31)
     elif period == 'custom' and start_date and end_date:
-        date_from = datetime.strptime(start_date, '%Y-%m-%d').date()
-        date_to = datetime.strptime(end_date, '%Y-%m-%d').date()
+        try:
+            date_from = datetime.strptime(start_date, '%Y-%m-%d').date()
+            date_to = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            date_from = today.replace(day=1)
+            date_to = today
     else:
         date_from = today.replace(day=1)
         date_to = today
     
-    # Get payments in date range
+    # ==================== BASE QUERY ====================
     payments = Payment.objects.filter(
         status='completed',
         created_at__date__gte=date_from,
         created_at__date__lte=date_to
+    ).select_related(
+        'booking',
+        'booking__trip',
+        'booking__trip__bus',
+        'booking__trip__bus__operator',
+        'booking__trip__route'
     )
     
-    # Total revenue
+    # Apply additional filters
+    if operator_id:
+        payments = payments.filter(booking__trip__bus__operator_id=operator_id)
+    
+    if route_id:
+        payments = payments.filter(booking__trip__route_id=route_id)
+    
+    if payment_method:
+        payments = payments.filter(payment_method=payment_method)
+    
+    if bus_type:
+        payments = payments.filter(booking__trip__bus__bus_type=bus_type)
+    
+    # ==================== KEY METRICS ====================
     total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
     total_transactions = payments.count()
+    average_transaction = total_revenue / total_transactions if total_transactions > 0 else 0
     
-    # Revenue by payment method
+    # Comparison with previous period
+    days_diff = (date_to - date_from).days + 1
+    prev_date_from = date_from - timedelta(days=days_diff)
+    prev_date_to = date_from - timedelta(days=1)
+    
+    prev_revenue = Payment.objects.filter(
+        status='completed',
+        created_at__date__gte=prev_date_from,
+        created_at__date__lte=prev_date_to
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    revenue_change = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+    
+    # ==================== REVENUE BY PAYMENT METHOD ====================
     revenue_by_method = payments.values('payment_method').annotate(
         total=Sum('amount'),
-        count=Count('id')
+        count=Count('id'),
+        avg=Avg('amount')
     ).order_by('-total')
     
-    # Revenue by operator
-    revenue_by_operator = payments.select_related(
-        'booking__trip__bus__operator'
-    ).values(
-        'booking__trip__bus__operator__name'
-    ).annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('-total')
+    # Calculate percentages
+    for method in revenue_by_method:
+        method['percentage'] = (method['total'] / total_revenue * 100) if total_revenue > 0 else 0
     
-    # Revenue by route
-    revenue_by_route = payments.select_related(
-        'booking__trip__route'
-    ).values(
-        'booking__trip__route__origin__name',
-        'booking__trip__route__destination__name'
+    # ==================== REVENUE BY OPERATOR ====================
+    revenue_by_operator = payments.values(
+        operator_name=F('booking__trip__bus__operator__name'),
+        operator_id=F('booking__trip__bus__operator_id')
     ).annotate(
         total=Sum('amount'),
-        count=Count('id')
+        count=Count('id'),
+        avg=Avg('amount'),
+        buses_used=Count('booking__trip__bus', distinct=True)
     ).order_by('-total')[:10]
     
-    # Daily revenue trend
+    for operator in revenue_by_operator:
+        operator['percentage'] = (operator['total'] / total_revenue * 100) if total_revenue > 0 else 0
+    
+    # ==================== REVENUE BY ROUTE ====================
+    revenue_by_route = payments.values(
+        origin=F('booking__trip__route__origin__name'),
+        destination=F('booking__trip__route__destination__name'),
+        route_id=F('booking__trip__route_id')
+    ).annotate(
+        total=Sum('amount'),
+        count=Count('id'),
+        avg=Avg('amount'),
+        distance=F('booking__trip__route__distance_km')
+    ).order_by('-total')[:15]
+    
+    for route in revenue_by_route:
+        route['percentage'] = (route['total'] / total_revenue * 100) if total_revenue > 0 else 0
+        route['revenue_per_km'] = route['total'] / route['distance'] if route['distance'] else 0
+    
+    # ==================== REVENUE BY BUS TYPE ====================
+    revenue_by_bus_type = payments.values(
+        bus_type=F('booking__trip__bus__bus_type')
+    ).annotate(
+        total=Sum('amount'),
+        count=Count('id'),
+        avg=Avg('amount')
+    ).order_by('-total')
+    
+    for bus_type_data in revenue_by_bus_type:
+        bus_type_data['percentage'] = (bus_type_data['total'] / total_revenue * 100) if total_revenue > 0 else 0
+    
+    # ==================== TIME-BASED TRENDS ====================
+    # Daily revenue (for line chart)
     daily_revenue = payments.annotate(
         date=TruncDate('created_at')
     ).values('date').annotate(
@@ -3068,11 +3189,33 @@ def revenue_report(request):
         count=Count('id')
     ).order_by('date')
     
-    # Monthly comparison (last 6 months)
-    six_months_ago = today - timedelta(days=180)
+    # Hourly revenue analysis
+    hourly_revenue = payments.annotate(
+        hour=RawSQL("CAST(strftime('%%H', created_at) AS INTEGER)", [])
+    ).values('hour').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('hour')
+    
+    # Day of week analysis
+    day_of_week_revenue = payments.annotate(
+        day=RawSQL("CAST(strftime('%%w', created_at) AS INTEGER)", [])
+    ).values('day').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('day')
+    
+    # Map day numbers to names
+    day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    for day_data in day_of_week_revenue:
+        day_data['day_name'] = day_names[int(day_data['day'])]
+
+    
+    # Monthly trend (last 12 months)
+    twelve_months_ago = today - timedelta(days=365)
     monthly_revenue = Payment.objects.filter(
         status='completed',
-        created_at__date__gte=six_months_ago
+        created_at__date__gte=twelve_months_ago
     ).annotate(
         month=TruncMonth('created_at')
     ).values('month').annotate(
@@ -3080,20 +3223,309 @@ def revenue_report(request):
         count=Count('id')
     ).order_by('month')
     
+    # ==================== TOP PERFORMERS ====================
+    # Top 10 buses by revenue
+    top_buses = payments.values(
+        bus_name=F('booking__trip__bus__bus_name'),
+        bus_id=F('booking__trip__bus_id'),
+        operator_name=F('booking__trip__bus__operator__name')
+    ).annotate(
+        total=Sum('amount'),
+        trips=Count('booking__trip', distinct=True),
+        bookings=Count('booking', distinct=True)
+    ).order_by('-total')[:10]
+    
+    # Top customers by spending
+    top_customers = payments.values(
+        customer_name=F('booking__customer_full_name'),
+        customer_email=F('booking__customer_email')
+    ).annotate(
+        total=Sum('amount'),
+        bookings=Count('booking', distinct=True)
+    ).order_by('-total')[:10]
+    
+    # ==================== SEAT CLASS ANALYSIS ====================
+    revenue_by_seat_class = payments.values(
+        seat_class=F('booking__seat_bookings__seat__seat_class')
+    ).annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    for seat_class in revenue_by_seat_class:
+        seat_class['percentage'] = (seat_class['total'] / total_revenue * 100) if total_revenue > 0 else 0
+    
+    # ==================== EXPORT HANDLING ====================
+    if export_format:
+        if export_format == 'csv':
+            return export_revenue_csv(
+                payments, 
+                date_from, 
+                date_to, 
+                total_revenue, 
+                total_transactions,
+                revenue_by_method,
+                revenue_by_operator,
+                revenue_by_route
+            )
+        elif export_format == 'json':
+            return export_revenue_json(
+                date_from,
+                date_to,
+                total_revenue,
+                total_transactions,
+                revenue_by_method,
+                revenue_by_operator,
+                revenue_by_route,
+                daily_revenue
+            )
+        elif export_format == 'pdf' and REPORTLAB_AVAILABLE:
+            return export_revenue_pdf(
+                date_from,
+                date_to,
+                total_revenue,
+                total_transactions,
+                revenue_by_method,
+                revenue_by_operator,
+                revenue_by_route
+            )
+    
+    # ==================== PREPARE CHART DATA ====================
+    # Format data for Chart.js
+    chart_data = {
+        'daily_labels': [item['date'].strftime('%Y-%m-%d') for item in daily_revenue],
+        'daily_revenue': [float(item['total']) for item in daily_revenue],
+        'daily_transactions': [item['count'] for item in daily_revenue],
+        
+        'method_labels': [method['payment_method'].upper() for method in revenue_by_method],
+        'method_data': [float(method['total']) for method in revenue_by_method],
+        
+        'operator_labels': [op['operator_name'] for op in revenue_by_operator],
+        'operator_data': [float(op['total']) for op in revenue_by_operator],
+        
+        'hourly_labels': [f"{int(item['hour']):02d}:00" for item in hourly_revenue],
+        'hourly_data': [float(item['total']) for item in hourly_revenue],
+        
+        'day_labels': [item['day_name'] for item in day_of_week_revenue],
+        'day_data': [float(item['total']) for item in day_of_week_revenue],
+        
+        'seat_class_labels': [sc['seat_class'] or 'Unknown' for sc in revenue_by_seat_class],
+        'seat_class_data': [float(sc['total']) for sc in revenue_by_seat_class],
+    }
+    
+    # ==================== FILTER OPTIONS ====================
+    operators = BusOperator.objects.filter(is_active=True).order_by('name')
+    routes = Route.objects.filter(is_active=True).select_related('origin', 'destination').order_by('origin__name')
+    payment_methods = [choice[0] for choice in Payment.PAYMENT_METHOD_CHOICES]
+    bus_types = [choice[0] for choice in Bus.BUS_TYPE_CHOICES]
+    
     context = {
+        # Filters
         'period': period,
         'date_from': date_from,
         'date_to': date_to,
+        'selected_operator': operator_id,
+        'selected_route': route_id,
+        'selected_payment_method': payment_method,
+        'selected_bus_type': bus_type,
+        
+        # Filter options
+        'operators': operators,
+        'routes': routes,
+        'payment_methods': payment_methods,
+        'bus_types': bus_types,
+        
+        # Key metrics
         'total_revenue': total_revenue,
         'total_transactions': total_transactions,
+        'average_transaction': average_transaction,
+        'prev_revenue': prev_revenue,
+        'revenue_change': revenue_change,
+        
+        # Analysis data
         'revenue_by_method': revenue_by_method,
         'revenue_by_operator': revenue_by_operator,
         'revenue_by_route': revenue_by_route,
-        'daily_revenue': list(daily_revenue),
-        'monthly_revenue': list(monthly_revenue),
+        'revenue_by_bus_type': revenue_by_bus_type,
+        'revenue_by_seat_class': revenue_by_seat_class,
+        
+        # Trends
+        'daily_revenue': daily_revenue,
+        'hourly_revenue': hourly_revenue,
+        'day_of_week_revenue': day_of_week_revenue,
+        'monthly_revenue': monthly_revenue,
+        
+        # Top performers
+        'top_buses': top_buses,
+        'top_customers': top_customers,
+        
+        # Chart data (JSON)
+        'chart_data': json.dumps(chart_data),
     }
+    
     return render(request, 'booking/reports/revenue.html', context)
 
+
+# ==================== EXPORT FUNCTIONS ====================
+
+def export_revenue_csv(payments, date_from, date_to, total_revenue, total_transactions, 
+                       revenue_by_method, revenue_by_operator, revenue_by_route):
+    """Export revenue report as CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="revenue_report_{date_from}_{date_to}.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Header
+    writer.writerow(['Revenue Report'])
+    writer.writerow(['Period', f'{date_from} to {date_to}'])
+    writer.writerow(['Generated', timezone.now().strftime('%Y-%m-%d %H:%M:%S')])
+    writer.writerow([])
+    
+    # Summary
+    writer.writerow(['SUMMARY'])
+    writer.writerow(['Total Revenue', f'KES {total_revenue:,.2f}'])
+    writer.writerow(['Total Transactions', total_transactions])
+    writer.writerow(['Average Transaction', f'KES {total_revenue/total_transactions:,.2f}' if total_transactions > 0 else 'N/A'])
+    writer.writerow([])
+    
+    # Revenue by Payment Method
+    writer.writerow(['REVENUE BY PAYMENT METHOD'])
+    writer.writerow(['Payment Method', 'Transactions', 'Total Revenue', 'Percentage'])
+    for method in revenue_by_method:
+        writer.writerow([
+            method['payment_method'].upper(),
+            method['count'],
+            f"KES {method['total']:,.2f}",
+            f"{method['percentage']:.2f}%"
+        ])
+    writer.writerow([])
+    
+    # Revenue by Operator
+    writer.writerow(['REVENUE BY OPERATOR'])
+    writer.writerow(['Operator', 'Bookings', 'Total Revenue', 'Average', 'Percentage'])
+    for operator in revenue_by_operator:
+        writer.writerow([
+            operator['operator_name'],
+            operator['count'],
+            f"KES {operator['total']:,.2f}",
+            f"KES {operator['avg']:,.2f}",
+            f"{operator['percentage']:.2f}%"
+        ])
+    writer.writerow([])
+    
+    # Revenue by Route
+    writer.writerow(['REVENUE BY ROUTE'])
+    writer.writerow(['Origin', 'Destination', 'Bookings', 'Total Revenue', 'Average', 'Percentage'])
+    for route in revenue_by_route:
+        writer.writerow([
+            route['origin'],
+            route['destination'],
+            route['count'],
+            f"KES {route['total']:,.2f}",
+            f"KES {route['avg']:,.2f}",
+            f"{route['percentage']:.2f}%"
+        ])
+    
+    return response
+
+
+def export_revenue_json(date_from, date_to, total_revenue, total_transactions,
+                        revenue_by_method, revenue_by_operator, revenue_by_route, daily_revenue):
+    """Export revenue report as JSON"""
+    data = {
+        'report_info': {
+            'period_start': str(date_from),
+            'period_end': str(date_to),
+            'generated_at': timezone.now().isoformat(),
+        },
+        'summary': {
+            'total_revenue': float(total_revenue),
+            'total_transactions': total_transactions,
+            'average_transaction': float(total_revenue / total_transactions) if total_transactions > 0 else 0,
+        },
+        'revenue_by_method': [
+            {
+                'payment_method': m['payment_method'],
+                'transactions': m['count'],
+                'total': float(m['total']),
+                'percentage': float(m['percentage'])
+            } for m in revenue_by_method
+        ],
+        'revenue_by_operator': [
+            {
+                'operator': o['operator_name'],
+                'bookings': o['count'],
+                'total': float(o['total']),
+                'average': float(o['avg']),
+                'percentage': float(o['percentage'])
+            } for o in revenue_by_operator
+        ],
+        'revenue_by_route': [
+            {
+                'origin': r['origin'],
+                'destination': r['destination'],
+                'bookings': r['count'],
+                'total': float(r['total']),
+                'average': float(r['avg']),
+                'percentage': float(r['percentage'])
+            } for r in revenue_by_route
+        ],
+        'daily_trend': [
+            {
+                'date': str(d['date']),
+                'revenue': float(d['total']),
+                'transactions': d['count']
+            } for d in daily_revenue
+        ]
+    }
+    
+    response = HttpResponse(json.dumps(data, indent=2), content_type='application/json')
+    response['Content-Disposition'] = f'attachment; filename="revenue_report_{date_from}_{date_to}.json"'
+    return response
+
+
+def export_revenue_pdf(date_from, date_to, total_revenue, total_transactions,
+                       revenue_by_method, revenue_by_operator, revenue_by_route):
+    """Export revenue report as PDF (requires reportlab)"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Title
+    title = Paragraph(f"Revenue Report: {date_from} to {date_to}", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))
+    
+    # Summary table
+    summary_data = [
+        ['Metric', 'Value'],
+        ['Total Revenue', f'KES {total_revenue:,.2f}'],
+        ['Total Transactions', f'{total_transactions}'],
+        ['Average Transaction', f'KES {total_revenue/total_transactions:,.2f}' if total_transactions > 0 else 'N/A'],
+    ]
+    
+    summary_table = Table(summary_data)
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 20))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="revenue_report_{date_from}_{date_to}.pdf"'
+    return response
 
 def booking_report(request):
     """Booking statistics and analysis"""
