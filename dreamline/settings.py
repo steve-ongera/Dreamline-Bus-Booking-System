@@ -37,6 +37,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'website_application.middleware.SecurityMonitoringMiddleware',
+    'website_application.middleware.SessionSecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'dreamline.urls'
